@@ -14,7 +14,7 @@ function createChunks(file,cSize) {
     return chunks;
 }
 
-function ConcatenateBlobs(blobs, type, callback) {
+function concatenateBlobs(blobs, type, callback) {
     var buffers = [];
 
     var index = 0;
@@ -107,8 +107,8 @@ function getSplittedEncodeFiles(file) {
     return files
 }
 
-async function encryptSingleFile(file) {
-    var key = "1234567887654321";
+async function encryptSingleFile(file, password) {
+    var key = password;
     const arrayBuffer = await getArrayBuffer(file)
     var wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
     var encrypted = CryptoJS.AES.encrypt(wordArray, key).toString();
@@ -117,10 +117,10 @@ async function encryptSingleFile(file) {
     return new File([fileEnc], file.name + ".enc");
 }
 
-function encrypt(file) {
+function encrypt(file, password) {
     const files = getSplittedEncodeFiles(file)
     return Promise.all(files.map(file => {
-        return encryptSingleFile(file)
+        return encryptSingleFile(file, password)
     }))
 }
 
@@ -147,23 +147,22 @@ function getFileAsText(file) {
     })
 }
 
-async function decrypt(files, fileName, fileType) {
+async function decrypt(files, fileName, password) {
     const decryptedFiles = await Promise.all(files.map(file => {
-        return decryptSingleFile(file)
+        return decryptSingleFile(file, password)
     }))
     return decryptedFiles
 }
 
-async function decryptSingleFile(file) {
-    const time1 = Date.now()
-    var key = "1234567887654321";  
+async function decryptSingleFile(file, password) {
+    console.log(file)
+    var key = password;  
+    console.log(key)
     const textFile = await getFileAsText(file) 
-    var decrypted = CryptoJS.AES.decrypt(textFile, key);               // Decryption: I: Base64 encoded string (OpenSSL-format) -> O: WordArray
-    var typedArray = convertWordArrayToUint8Array(decrypted);               // Convert: WordArray -> typed array
-    var fileDec = new Blob([typedArray]);                                   // Create blob from typed array
-    console.log(`decrypted file: ${file.name}`)
-    const time2 = Date.now()
-    console.log(`duration: ${time2 - time1}`)
+    var decrypted = CryptoJS.AES.decrypt(textFile, key);
+    console.log(decrypted)
+    var typedArray = convertWordArrayToUint8Array(decrypted);
+    var fileDec = new Blob([typedArray]);
     return fileDec
 }
 
@@ -172,6 +171,6 @@ async function decryptSingleFile(file) {
 module.exports = {
     encrypt,
     decrypt,
-    ConcatenateBlobs,
+    concatenateBlobs,
     saveFile
 }

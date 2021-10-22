@@ -1,0 +1,37 @@
+#page-layout-trigger {
+    height: 100vh;
+}
+
+#page-layout-trigger .ant-layout {
+    height: 100vh;
+}
+
+#page-layout-trigger .ant-layout .ant-layout-content {
+    overflow: auto;
+}
+
+#page-layout-trigger .ant-layout-sider-children ul.ant-menu {
+    padding-top:auto;
+}
+
+#page-layout-trigger .trigger {
+    padding: 0 24px;
+    font-size: 18px;
+    line-height: 64px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+#page-layout-trigger .trigger:hover {
+    color: #1890ff;
+}
+
+#page-layout-trigger .logo {
+    height: 32px;
+    margin: 16px;
+    background: rgba(255, 255, 255, 0.3);
+    }
+
+.site-layout .site-layout-background {
+    background: #fff;
+}

@@ -7,8 +7,8 @@ export async function initContract() {
   window.walletConnection = new WalletConnection(near)
   window.accountId = window.walletConnection.getAccountId()
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ['getGreeting', 'getUserToken'],
-    changeMethods: ['setGreeting', 'setUserTokenMap'],
+    viewMethods: ['isSignedUp', 'getUser', 'getFolderInfo', 'getSharedFolderInfo'],
+    changeMethods: ['signUp', 'createFolder', 'createSharedFolder', 'createFile', 'removeFile', 'removeFolder', ],
   })
 }
 

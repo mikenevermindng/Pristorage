@@ -1,5 +1,6 @@
-import HomePage from "../pages/HomePage"
-import LoginPage from "../pages/LoginPage"
+import LoginPage from "../pages/Login"
+import Home from '../pages/Home'
+import Shared from '../pages/Shared'
 
 const isAuthenticated = () => {
     return window.walletConnection.isSignedIn()
@@ -11,8 +12,13 @@ const routers = [
         component: LoginPage
     },
     {
+        path: '/shared',
+        component: Shared,
+        beforeRouteEnter: isAuthenticated
+    },
+    {
         path: '/',
-        component: HomePage,
+        component: Home,
         beforeRouteEnter: isAuthenticated
     },
 ]

@@ -1,4 +1,4 @@
-const CONTRACT_NAME = process.env.CONTRACT_NAME ||'Vi storage 2.0'
+const CONTRACT_NAME = process.env.CONTRACT_NAME || 'Vi storage 2.0'
 
 function getConfig(env) {
   switch (env) {

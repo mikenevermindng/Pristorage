@@ -36,9 +36,32 @@ async function retrieve(cid) {
     // request succeeded! do something with the response object here...
 }
 
+async function checkFileStatus(cid) {
+    const client = makeStorageClient()
+    const status = await client.status(cid)
+    if (status) {
+        console.log(status)
+    }
+}
+
+async function validateToken(token) {
+    const web3storage = new Web3Storage({ token })
+
+    try {
+        for await (const _ of web3storage.list({ maxResults: 1})) {
+            break
+        }
+        return true
+    } catch (e) {
+        return false
+    }
+}
+
 module.exports = {
     makeStorageClient,
     storeFiles,
     retrieve,
-    retrieveFiles
+    retrieveFiles,
+    checkFileStatus,
+    validateToken
 }

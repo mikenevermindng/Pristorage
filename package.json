@@ -32,21 +32,28 @@
     "shelljs": "~0.8.4"
   },
   "dependencies": {
+    "@ant-design/icons": "^4.7.0",
     "@reduxjs/toolkit": "^1.6.2",
     "antd": "^4.16.13",
     "axios": "^0.22.0",
+    "bip39": "^3.0.4",
     "comlink": "^4.3.1",
     "cryptico": "^1.0.2",
+    "crypto": "^1.0.1",
     "crypto-js": "^4.1.1",
     "electron-is-dev": "^2.0.0",
+    "formik": "^2.2.9",
     "ipfs-car": "^0.5.8",
+    "lodash": "^4.17.21",
     "near-api-js": "~0.41.0",
     "react": "~17.0.1",
     "react-dom": "~17.0.1",
     "react-redux": "^7.2.5",
     "react-router-dom": "^5.3.0",
     "regenerator-runtime": "~0.13.5",
-    "web3.storage": "^3.3.2"
+    "uuid": "^8.3.2",
+    "web3.storage": "^3.3.2",
+    "yup": "^0.32.11"
   },
   "resolutions": {
     "@babel/preset-env": "7.13.8"
