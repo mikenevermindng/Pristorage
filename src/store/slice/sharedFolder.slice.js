@@ -4,12 +4,21 @@ export const getSharedFolderInfo = createAsyncThunk(
     'commonFolder/getSharedFolderInfo',
     async (id, thunkApi) => {
         const res = await window.contract.get_shared_folder_info({folder_id: id})
-        const {children, parent} = res
-        const root = await window.contract.get_root_shared_folder({_parent: parent})
+        const {children, files} = res
+        const {accountId} = await window.walletConnection.account()
+        const root = await window.contract.get_root_shared_folder({_current: id, _account_id: accountId})
+        console.log(root)
         const childrenInDetail = await Promise.all(children.map(child => {
-            return window.contract.get_shared_folder_info({folder_id: child})
+            return window.contract.get_shared_folder_info({folder_id: child}).then(result => {
+                return {...result, id: child}
+            })
         }))
-        return {...res, children: childrenInDetail, root: root}
+        const filesDetail = await Promise.all(files.map(id => {
+            return window.contract.get_file_info({file_id: id}).then(result => {
+                return {...result, id}
+            })
+        }))
+        return {...res, id, children: childrenInDetail, root: root, files: filesDetail}
     }
 )
 

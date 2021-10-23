@@ -16,7 +16,9 @@ export async function initContract() {
       'get_folder_info', 
       'get_shared_folder_info',
       'get_file_info',
-      'get_root_shared_folder'
+      'get_root_shared_folder',
+      'get_owner_by_folder_id',
+      'get_owner_by_shared_folder_id'
     ],
     changeMethods: [
       'sign_up', 

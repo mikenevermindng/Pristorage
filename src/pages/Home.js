@@ -1,13 +1,14 @@
 import React, {useState, useEffect} from 'react'
-import { Layout, Menu } from 'antd';
 import './style/Home.page.css'
 import {
     FolderAddOutlined,
     UploadOutlined,
     InboxOutlined,
-    DownloadOutlined
+    DownloadOutlined,
+    DeleteOutlined,
+    ShareAltOutlined
 } from '@ant-design/icons';
-import { Button, Table, Modal, Input, Upload, message  } from 'antd';
+import { Button, Table, Modal, Input, Upload, message, Tooltip } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import {getFolderInfo} from '../store/slice/commonFolder.slice'
 import { v4 as uuidv4 } from 'uuid';
@@ -183,6 +184,11 @@ export default function Home() {
         },
     };
 
+    const redirectToFolder = (id) => {
+        history.push(`/?folder=${id}`)
+        history.go(0)
+    }
+
     const columns = [
         {
             title: 'Name',
@@ -191,7 +197,7 @@ export default function Home() {
                 return (
                     <div>
                         {record.type !== 'File'  ? 
-                            <a onClick={() => dispatch(getFolderInfo(record.id))}>{record.name}</a>:
+                            <a onClick={() => redirectToFolder(record.id)}>{record.name}</a>:
                             <span>{record.name}</span>
                         }
                     </div>
@@ -211,26 +217,32 @@ export default function Home() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type === 'File' && <div>
-                            <Button
-                                onClick={async () => {
-                                    const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                    const {plaintext, status} = rsaDecrypt(record.encrypted_password, MattsRSAkey)
-                                    if (status === "success") {
-                                        const files = await retrieveFiles(record.cid)
-                                        const worker = new Worker('../worker.js')
-                                        const {decryptByWorker} = wrap(worker)
-                                        const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                        console.log(decryptedFile)
-                                        concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                                            saveFile(blob, record.name)
-                                        })
-                                    }
-                                    
-                                }}
-                            >
-                                <DownloadOutlined />Download
-                            </Button>
+                        {record.type === 'File' && <div className="d-flex justify-content-evenly">
+                            <Tooltip title="Tải xuống">
+                                <Button
+                                    onClick={async () => {
+                                        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+                                        const {plaintext, status} = rsaDecrypt(record.encrypted_password, MattsRSAkey)
+                                        if (status === "success") {
+                                            const files = await retrieveFiles(record.cid)
+                                            const worker = new Worker('../worker.js')
+                                            const {decryptByWorker} = wrap(worker)
+                                            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
+                                            console.log(decryptedFile)
+                                            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
+                                                saveFile(blob, record.name)
+                                            })
+                                        }
+                                    }}
+                                >
+                                    <DownloadOutlined />
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Chia sẻ">
+                                <Button>
+                                    <ShareAltOutlined />
+                                </Button>
+                            </Tooltip>
                         </div>}
                     </div>
                 )

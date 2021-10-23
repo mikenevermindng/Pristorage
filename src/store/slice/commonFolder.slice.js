@@ -6,12 +6,16 @@ export const getFolderInfo = createAsyncThunk(
         const res = await window.contract.get_folder_info({folder_id: id})
         const {children, files} = res
         const childrenInDetail = await Promise.all(children.map(child => {
-            return window.contract.get_folder_info({folder_id: child})
+            return window.contract.get_folder_info({folder_id: child}).then(result => {
+                return {...result, id: child}
+            })
         }))
         const filesDetail = await Promise.all(files.map(id => {
-            return window.contract.get_file_info({file_id: id})
+            return window.contract.get_file_info({file_id: id}).then(result => {
+                return {...result, id}
+            })
         }))
-        return {...res, children: childrenInDetail, files: filesDetail}
+        return {...res, id, children: childrenInDetail, files: filesDetail}
     }
 )
 

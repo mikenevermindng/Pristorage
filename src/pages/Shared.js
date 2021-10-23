@@ -1,14 +1,25 @@
 import React, {useState, useEffect} from 'react'
-import { Layout, Menu } from 'antd';
 import './style/Home.page.css'
 import {
     FolderAddOutlined,
     UploadOutlined,
     InboxOutlined,
-    DownloadOutlined
+    DownloadOutlined,
+    DeleteOutlined
 } from '@ant-design/icons';
-import { Button, Table, Modal, Input, Upload, message  } from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
+import { 
+    Button, 
+    Table, 
+    Modal, 
+    Input, 
+    Upload, 
+    message, 
+    Tooltip 
+} from 'antd';
+import { 
+    useSelector, 
+    useDispatch 
+} from 'react-redux';
 import {getSharedFolderInfo} from '../store/slice/sharedFolder.slice'
 import { v4 as uuidv4 } from 'uuid';
 import {wrap} from 'comlink'
@@ -56,14 +67,17 @@ export default function Shared() {
             const {status, cipher} = rsaEncrypt(folder_password, MattsPublicKeyString)
             if (status === "success") {
                 const id = uuidv4()
+                const {accountId} = await window.walletConnection.account()
                 const folder = {
                     _id: id, 
                     _name: values.name, 
                     _parent: current.id,
                     _password: cipher,
+                    _account_id: accountId
                 }
                 const data = await window.contract.create_shared_folder(folder)
-                history.go(0)
+                console.log(data)
+                // history.go(0)
             } else {
                 message.error('fail to encode password')
             }
@@ -98,11 +112,11 @@ export default function Shared() {
     
     useEffect(() => {
         const fetchData = async () => {
-            const folderId = getUrlParameter('shared_folder')
-            const {accountId} = await window.walletConnection.account()
+            const folderId = getUrlParameter('folder')
             if (folderId) {
                 dispatch(getSharedFolderInfo(folderId))
             } else {
+                const {accountId} = await window.walletConnection.account()
                 dispatch(getSharedFolderInfo(accountId))
             }
         }
@@ -125,28 +139,35 @@ export default function Shared() {
 
         const cid = await storeFiles(files, onRootCidReady, onStoredChunk)
         
-        await window.contract.create_file({
+        await window.contract.create_shared_folder_file({
             _folder: current.id, 
+            _file_id: uuidv4(),
             _cid: cid, 
             _name: filename, 
-            _encrypted_password: encryptedPassword, 
             _file_type: fileType 
         })
         history.go(0)
     }
 
     const fileSubmit = async (file) => {
-        const worker = new Worker('../worker.js')
-        const {encryptByWorker} = wrap(worker)
-        const password = uuidv4()
-        const encryptedFiles = await encryptByWorker(file, password)
-        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-        const MattsPublicKeyString = createPubKeyString(MattsRSAkey)
-        const {status, cipher} = rsaEncrypt(password, MattsPublicKeyString)
-        if (status === "success") {
-            await storeToWeb3Storage(encryptedFiles, file.name, file.type, cipher)
-            setIsModalUploadVisible(false)
-            history.go(0)
+        const {root} = current
+        if (root) {
+            const {folder_password: folderPassword} = root
+            console.log(folderPassword)
+            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+            const {status, plaintext: folderDecryptedPassword} = rsaDecrypt(folderPassword, MattsRSAkey)
+            console.log(folderDecryptedPassword)
+            if (status === "success") {
+                const worker = new Worker('../worker.js')
+                const {encryptByWorker} = wrap(worker)
+                const encryptedFiles = await encryptByWorker(file, folderDecryptedPassword)
+                if (status === "success") {
+                    await storeToWeb3Storage(encryptedFiles, file.name, file.type)
+                    setIsModalUploadVisible(false)
+                    history.go(0)
+                }
+            }
+            
         }
     }
 
@@ -190,6 +211,11 @@ export default function Shared() {
         },
     };
 
+    const redirectToFolder = (id) => {
+        history.push(`/shared?folder=${id}`)
+        history.go(0)
+    }
+
     const columns = [
         {
             title: 'Name',
@@ -198,7 +224,7 @@ export default function Shared() {
                 return (
                     <div>
                         {record.type !== 'File'  ? 
-                            <a onClick={() => dispatch(getSharedFolderInfo(record.id))}>{record.name}</a>:
+                            <a onClick={() => redirectToFolder(record.id)}>{record.name}</a>:
                             <span>{record.name}</span>
                         }
                     </div>
@@ -218,26 +244,36 @@ export default function Shared() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type === 'File' && <div>
-                            <Button
-                                onClick={async () => {
-                                    const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                    const {plaintext, status} = rsaDecrypt(record.encrypted_password, MattsRSAkey)
-                                    if (status === "success") {
-                                        const files = await retrieveFiles(record.cid)
-                                        const worker = new Worker('../worker.js')
-                                        const {decryptByWorker} = wrap(worker)
-                                        const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                        console.log(decryptedFile)
-                                        concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                                            saveFile(blob, record.name)
-                                        })
-                                    }
-                                    
-                                }}
-                            >
-                                <DownloadOutlined />Download
-                            </Button>
+                        {record.type === 'File' && <div className="d-flex justify-content-evenly">
+                            <Tooltip title="Tải xuống">
+                                <Button
+                                    onClick={async () => {
+                                        const {root} = current
+                                        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+                                        const {plaintext, status} = rsaDecrypt(root.folder_password, MattsRSAkey)
+                                        if (status === "success") {
+                                            const files = await retrieveFiles(record.cid)
+                                            const worker = new Worker('../worker.js')
+                                            const {decryptByWorker} = wrap(worker)
+                                            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
+                                            console.log(decryptedFile)
+                                            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
+                                                saveFile(blob, record.name)
+                                            })
+                                        }
+                                        
+                                    }}
+                                >
+                                    <DownloadOutlined />
+                                </Button>
+                            </Tooltip>
+                            {/* <Tooltip title="Xóa file">
+                                <Button
+                                    danger 
+                                >
+                                    <DeleteOutlined />
+                                </Button>
+                            </Tooltip> */}
                         </div>}
                     </div>
                 )
