@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react'
-import './style/Home.page.css'
+import './style/General.page.css'
 import {
     FolderAddOutlined,
     UploadOutlined,
@@ -30,12 +30,15 @@ import {
 import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import { useHistory } from 'react-router-dom';
+import ShareFileButton from '../components/ShareFileButton'
 
 const { Dragger } = Upload;
 
 const folderValidationSchema = Yup.object().shape({
     name: Yup.string().required('Tên thư mục không được bỏ trống'),
 });
+
+
 import * as nearApiJs from 'near-api-js';
 
 export default function Home() {
@@ -79,10 +82,6 @@ export default function Home() {
 
     const showModalUpload = () => {
         setIsModalUploadVisible(true);
-    };
-    
-    const handleUpload = () => {
-        setIsModalUploadVisible(false);
     };
     
     const handleCancelUpload = () => {
@@ -239,9 +238,7 @@ export default function Home() {
                                 </Button>
                             </Tooltip>
                             <Tooltip title="Chia sẻ">
-                                <Button>
-                                    <ShareAltOutlined />
-                                </Button>
+                                <ShareFileButton {...{...record, folder: commonFolderCurrent.id}} />
                             </Tooltip>
                         </div>}
                     </div>

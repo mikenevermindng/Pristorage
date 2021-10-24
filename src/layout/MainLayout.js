@@ -76,7 +76,7 @@ export default function MainLayout({children}) {
             const randomBytes = crypto.randomBytes(16)
             const mnemonic = entropyToMnemonic(randomBytes.toString('hex'))
             const blob = new Blob([mnemonic], { type: "text/plain;charset=utf-8" });
-            saveFile(blob, 'SeedPhrase.txt')
+            saveFile(blob, `${accountId}_SeedPhrase.txt`)
             const MattsRSAkey = createKeyPair(mnemonic);
             const MattsPublicKeyString = createPubKeyString(MattsRSAkey)
             const encryptedToken = rsaEncrypt(values.token, MattsPublicKeyString)
@@ -173,7 +173,7 @@ export default function MainLayout({children}) {
                             <Link to="/shared">Thư mục chia sẻ</Link>
                         </Menu.Item>
                         <Menu.Item key="3" icon={<UserSwitchOutlined />}>
-                            Được chia sẻ với tôi
+                            <Link to="/shared_to_me">Được chia sẻ với tôi</Link>
                         </Menu.Item>
                     </Menu>
                 </Sider>

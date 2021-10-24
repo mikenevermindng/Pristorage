@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react'
-import './style/Home.page.css'
+import './style/General.page.css'
 import {
     FolderAddOutlined,
     UploadOutlined,
@@ -40,6 +40,7 @@ import {
 import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import {useHistory} from 'react-router-dom'
+import ShareFolderButton from '../components/ShareFolderButton'
 
 const { Dragger } = Upload;
 
@@ -274,6 +275,11 @@ export default function Shared() {
                                     <DeleteOutlined />
                                 </Button>
                             </Tooltip> */}
+                        </div>}
+                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                            <Tooltip title="Xóa file">
+                                <ShareFolderButton {...record} />
+                            </Tooltip>
                         </div>}
                     </div>
                 )

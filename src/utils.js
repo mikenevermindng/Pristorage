@@ -18,7 +18,11 @@ export async function initContract() {
       'get_file_info',
       'get_root_shared_folder',
       'get_owner_by_folder_id',
-      'get_owner_by_shared_folder_id'
+      'get_owner_by_shared_folder_id',
+      'get_shared_folders_of_user',
+      'get_shared_user_of_folder',
+      'get_shared_files_of_user',
+      'get_shared_user_of_file'
     ],
     changeMethods: [
       'sign_up', 
@@ -27,7 +31,9 @@ export async function initContract() {
       'create_file', 
       'remove_file', 
       'remove_folder',
-      'create_shared_folder_file'
+      'create_shared_folder_file',
+      'share_file',
+      'share_folder'
     ],
   })
 }
