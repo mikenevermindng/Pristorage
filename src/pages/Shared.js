@@ -276,7 +276,7 @@ export default function Shared() {
                                 </Button>
                             </Tooltip> */}
                         </div>}
-                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                        {record.type === 'Folder' && current.root === null && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Xóa file">
                                 <ShareFolderButton {...record} />
                             </Tooltip>

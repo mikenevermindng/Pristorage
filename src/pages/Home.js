@@ -38,9 +38,6 @@ const folderValidationSchema = Yup.object().shape({
     name: Yup.string().required('Tên thư mục không được bỏ trống'),
 });
 
-
-import * as nearApiJs from 'near-api-js';
-
 export default function Home() {
 
     const [data, setData] = useState([])
@@ -217,7 +214,7 @@ export default function Home() {
                 return (
                     <div>
                         {record.type === 'File' && <div className="d-flex justify-content-evenly">
-                            <Tooltip title="Tải xuống">
+                            <Tooltip title="Download">
                                 <Button
                                     onClick={async () => {
                                         const MattsRSAkey = createKeyPair(userCurrent.privateKey);

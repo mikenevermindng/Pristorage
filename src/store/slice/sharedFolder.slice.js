@@ -7,7 +7,6 @@ export const getSharedFolderInfo = createAsyncThunk(
         const {children, files} = res
         const {accountId} = await window.walletConnection.account()
         const root = await window.contract.get_root_shared_folder({_current: id, _account_id: accountId})
-        console.log(root)
         const childrenInDetail = await Promise.all(children.map(child => {
             return window.contract.get_shared_folder_info({folder_id: child}).then(result => {
                 return {...result, id: child}
@@ -18,7 +17,11 @@ export const getSharedFolderInfo = createAsyncThunk(
                 return {...result, id}
             })
         }))
-        return {...res, id, children: childrenInDetail, root: root, files: filesDetail}
+        if (root) {
+            return {...res, id, children: childrenInDetail, root: root[1], rootId: root[0], files: filesDetail}
+        } else {
+            return {...res, id, children: childrenInDetail, files: filesDetail, root: null}
+        }
     }
 )
 
@@ -33,7 +36,6 @@ const sharedFolderSlice = createSlice({
             files: [],
             parent: '',
             children: [],
-            root: '',
             folder_password: '',
             root: {
                 id: '',

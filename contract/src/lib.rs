@@ -56,6 +56,21 @@ pub struct SharedFolderDoc {
     share_password: String
 }
 
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct SharedFileDocDetail {
+    file: File,
+    share_password: String,
+
+}
+
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct SharedFolderDocDetail {
+    folder: SharedFolder,
+    share_password: String
+}
+
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Contract {
@@ -419,11 +434,11 @@ impl Contract {
                                 self.user_to_shared_folder.insert(&_share_with, &new_user_to_folders);
                             }
                         }
-                        let share_doc = SharedFileDoc {
-                            file: _folder_id,
+                        let share_doc = SharedFolderDoc {
+                            folder: _folder_id,
                             share_password: _password
                         };
-                        self.shared_file_docs.insert(&_doc_id, &share_doc);
+                        self.shared_folder_docs.insert(&_doc_id, &share_doc);
                     }, 
                     None => {
                         env::log(format!("Folder not found: '{}'", _folder_id).as_bytes());
@@ -601,32 +616,68 @@ impl Contract {
         }
     }
 
-    pub fn get_shared_file_docs_by_owner(&self, _account_id: String, _owner: String) -> Option<Vec<String>> {
-        match self.user_to_shared_file.get(&_account_id) {
-            Some(account_to_docs) => {
-                match account_to_docs.get(&_owner) {
-                    Some(list) => {
-                        Some(list.to_vec())
-                    },
-                    None => None
-                }
-            },
-            None => None
-        }
-    }
-
-    pub fn get_shared_folder_docs_by_owner(&self, _account_id: String, _owner: String) -> Option<Vec<String>> {
+    pub fn get_shared_folder_docs_by_owner(&self, _account_id: String) -> Vec<(String, String, String, SharedFolder)> {
+        let mut result: Vec<(String, String, String, SharedFolder)> = Vec::new();
         match self.user_to_shared_folder.get(&_account_id) {
             Some(account_to_docs) => {
-                match account_to_docs.get(&_owner) {
-                    Some(list) => {
-                        Some(list.to_vec())
-                    },
-                    None => None
-                }
+                let accounts = account_to_docs.keys_as_vector();
+                for account in accounts.iter() {
+                    match account_to_docs.get(&account) {
+                        Some(set_docs) => {
+                            let doc_id_keys = set_docs.to_vec();
+                            for doc_id in doc_id_keys.iter() {
+                                match self.shared_folder_docs.get(&doc_id) {
+                                    Some(doc) => {
+                                        match self.shared_folders.get(&doc.folder) {
+                                            Some(folder) => {
+                                                result.push((String::from(&account[..]), doc.folder, doc.share_password, folder));
+                                            },
+                                            None => {}
+                                        }
+                                    }, 
+                                    None => {}
+                                }
+                            }
+                        },
+                        None => {}
+                    }
+                };
             },
-            None => None
+            None => {}
         }
+        result
+    }
+
+    pub fn get_shared_file_docs_by_owner(&self, _account_id: String) ->Vec<(String, String, String, File)> {
+        let mut result: Vec<(String, String, String, File)> = Vec::new();
+        match self.user_to_shared_file.get(&_account_id) {
+            Some(account_to_docs) => {
+                let accounts = account_to_docs.keys_as_vector();
+                for account in accounts.iter() {
+                    match account_to_docs.get(&account) {
+                        Some(set_docs) => {
+                            let doc_id_keys = set_docs.to_vec();
+                            for doc_id in doc_id_keys.iter() {
+                                match self.shared_file_docs.get(&doc_id) {
+                                    Some(doc) => {
+                                        match self.files.get(&doc.file) {
+                                            Some(file) => {
+                                                result.push((String::from(&account[..]), doc.file, doc.share_password, file));
+                                            },
+                                            None => {}
+                                        }
+                                    }, 
+                                    None => {}
+                                }
+                            }
+                        },
+                        None => {}
+                    }
+                };
+            },
+            None => {}
+        }
+        result
     }
 
     pub fn get_shared_user_of_file(&self, _file: String) -> Option<Vec<String>> {
@@ -643,7 +694,7 @@ impl Contract {
         }
     }
 
-    pub fn get_root_shared_folder(&self, _current: String, _account_id: String) -> Option<SharedFolder> {
+    pub fn get_root_shared_folder(&self, _current: String, _account_id: String) -> Option<(String, SharedFolder)> {
         let mut current_id = String::from(&_current[..]);
         let mut root_id = String::from("");
         while current_id.ne(&_account_id) {
@@ -656,7 +707,7 @@ impl Contract {
             };
         };
         match self.shared_folders.get(&root_id) {
-            Some(folder) => Some(folder),
+            Some(folder) => Some((root_id, folder)),
             None => None,
         }
     }

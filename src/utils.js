@@ -22,7 +22,9 @@ export async function initContract() {
       'get_shared_folders_of_user',
       'get_shared_user_of_folder',
       'get_shared_files_of_user',
-      'get_shared_user_of_file'
+      'get_shared_user_of_file',
+      'get_shared_file_docs_by_owner',
+      'get_shared_folder_docs_by_owner'
     ],
     changeMethods: [
       'sign_up', 

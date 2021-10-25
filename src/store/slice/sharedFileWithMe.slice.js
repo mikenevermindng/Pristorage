@@ -4,12 +4,14 @@ export const getSharedFileInfo = createAsyncThunk(
     'filesSharedToMe/getSharedFileInfo',
     async (id, thunkApi) => {
         const {accountId} = await window.walletConnection.account();
-        const res = await window.contract.get_shared_files_of_user({_account_id: accountId})
-        var result = Object.keys(res).map((key) => {
+        const res = await window.contract.get_shared_file_docs_by_owner({_account_id: accountId})
+        const result = res.map(file => {
             return {
-                account: key, 
-                docs: res[key]
-            };
+                ...file[3],
+                owner: file[0],
+                id: file[1],
+                sharedPassword: file[2]
+            }
         })
         return result
     }
