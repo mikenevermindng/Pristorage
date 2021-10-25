@@ -453,7 +453,7 @@ impl Contract {
 
     pub fn remove_file(&mut self, _folder: String, _file: String) {
         let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
+        match self.get_owner_by_folder_id(String::from(&_folder[..])) {
             Some(owner) => {
                 assert_eq!(
                     String::from(&_account_id[..]), 
@@ -507,7 +507,7 @@ impl Contract {
 
     pub fn remove_folder(&mut self, _folder: String) {
         let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
+        match self.get_owner_by_folder_id(String::from(&_folder[..])) {
             Some(owner) => {
                 assert_eq!(
                     String::from(&_account_id[..]), 
@@ -515,10 +515,17 @@ impl Contract {
                     "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
                 );
                 match self.folders.get(&_folder) {
-                    Some(mut folder) => {
-                        let index = folder.children.iter().position(|x| *x == _folder).unwrap();
-                        folder.children.remove(index);
-                        self.folders.insert(&_folder, &folder);
+                    Some(folder) => {
+                        match self.folders.get(&folder.parent) {
+                            Some(mut parent_folder) => {
+                                let index = parent_folder.children.iter().position(|x| *x == _folder).unwrap();
+                                parent_folder.children.remove(index);
+                                self.folders.remove(&_folder);
+                                self.folders.insert(&folder.parent, &parent_folder);
+                            },
+                            None => {}
+                        }
+                        self.folders.remove(&_folder);
                     },
                     None => {
                         env::log(format!("Folder not found: '{}'", _folder).as_bytes());
@@ -541,20 +548,27 @@ impl Contract {
                     "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
                 );
                 match self.shared_folders.get(&_folder) {
-                    Some(mut folder) => {
-                        let index = folder.children.iter().position(|x| *x == _folder).unwrap();
-                        folder.children.remove(index);
-                        self.shared_folders.insert(&_folder, &folder);
+                    Some(folder) => {
+                        match self.shared_folders.get(&folder.parent) {
+                            Some(mut parent_folder) => {
+                                let index = parent_folder.children.iter().position(|x| *x == _folder).unwrap();
+                                parent_folder.children.remove(index);
+                                self.folders.remove(&_folder);
+                                self.shared_folders.insert(&folder.parent, &parent_folder);
+                            },
+                            None => {}
+                        }
+                        self.shared_folders.remove(&_folder);
                     },
                     None => {
-                        env::log(format!("Folder not found: '{}'", _folder).as_bytes());
+
                     }
                 };
             },
             None => {
-                env::log(format!("Folder not found: '{}'", _folder).as_bytes());
+                env::log(format!("You are not owner").as_bytes());
             }
-        }
+        };
     }
 
     pub fn get_shared_folders_of_user(&self, _account_id: String) -> Option<HashMap<String, Vec<String>>> {
@@ -713,25 +727,16 @@ impl Contract {
     }
 
     pub fn get_owner_by_folder_id(&self, _folder_id: String) -> Option<String> {
-        match self.folders.get(&_folder_id) {
-            Some(folder_by_id) => {
-                let mut current_id = String::from(&_folder_id[..]);
-                let mut parent_id = String::from(&folder_by_id.parent[..]);
-                while current_id.ne(&parent_id[..]) {
-                    match self.folders.get(&parent_id) {
-                        Some(folder) => {
-                            parent_id = folder.parent;
-                            current_id = String::from(&parent_id[..]);
-                        },
-                        None => {},
-                    };
-                };
-                Some(current_id)
-            }, 
-            None => {
-                None
-            }
-        }
+        let mut current_id = String::from(&_folder_id[..]);
+        while self.users.get(&current_id).is_none() {
+            match self.folders.get(&current_id) {
+                Some(folder) => {
+                    current_id = folder.parent;
+                },
+                None => {},
+            };
+        };
+        Some(current_id)
     }
 
     pub fn get_owner_by_shared_folder_id(&self, _shared_folder_id: String) -> Option<String> {

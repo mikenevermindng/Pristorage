@@ -5,7 +5,6 @@ import {
     UploadOutlined,
     InboxOutlined,
     DownloadOutlined,
-    DeleteOutlined,
     ShareAltOutlined
 } from '@ant-design/icons';
 import { Button, Table, Modal, Input, Upload, message, Tooltip } from 'antd';
@@ -31,6 +30,7 @@ import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import { useHistory } from 'react-router-dom';
 import ShareFileButton from '../components/ShareFileButton'
+import DeleteButton from '../components/DeleteButton'
 
 const { Dragger } = Upload;
 
@@ -234,8 +234,26 @@ export default function Home() {
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
-                            <Tooltip title="Chia sẻ">
+
+                            <Tooltip title="Share">
                                 <ShareFileButton {...{...record, folder: commonFolderCurrent.id}} />
+                            </Tooltip>
+
+                            <Tooltip title="Remove">
+                                <DeleteButton 
+                                    type="File" 
+                                    name={record.name} 
+                                    handleDelete={() => window.contract.remove_file({_folder: commonFolderCurrent.id, _file: record.id})}
+                                />
+                            </Tooltip>
+                        </div>}
+                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                            <Tooltip title="Remove">
+                                <DeleteButton 
+                                    type="Folder" 
+                                    name={record.name} 
+                                    handleDelete={() => window.contract.remove_folder({_folder: record.id})}
+                                />
                             </Tooltip>
                         </div>}
                     </div>
@@ -249,7 +267,7 @@ export default function Home() {
         <>
         <div id="homepage">
             <div className="header">
-                <h2 className="title">Private Storage</h2>
+                <h2 className="title">My folders</h2>
                 <hr />
             </div>
             <div className="content">

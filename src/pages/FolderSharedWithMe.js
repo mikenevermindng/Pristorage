@@ -11,7 +11,8 @@ import {
     Table, 
     Tabs,
     Tooltip,
-    Button
+    Button,
+    message 
 } from 'antd';
 import { 
     useSelector, 
@@ -121,7 +122,11 @@ export default function Shared() {
                                                 concatenateBlobs(decryptedFile, record.file_type, (blob) => {
                                                     saveFile(blob, record.name)
                                                 })
+                                            } else {
+                                                message.error('Fail to decrypt folder password')
                                             }
+                                        } else {
+                                            message.error('Fail to decrypt folder password')
                                         }
                                     }}
                                 >

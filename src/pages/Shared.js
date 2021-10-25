@@ -41,6 +41,7 @@ import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import {useHistory} from 'react-router-dom'
 import ShareFolderButton from '../components/ShareFolderButton'
+import DeleteButton from '../components/DeleteButton'
 
 const { Dragger } = Upload;
 
@@ -264,17 +265,24 @@ export default function Shared() {
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
-                            {/* <Tooltip title="Xóa file">
-                                <Button
-                                    danger 
-                                >
-                                    <DeleteOutlined />
-                                </Button>
-                            </Tooltip> */}
+                            <Tooltip title="Remove">
+                                <DeleteButton 
+                                    type="File" 
+                                    name={record.name} 
+                                    handleDelete={() => window.contract.remove_shared_file({_folder: current.id, _file: record.id})}
+                                />
+                            </Tooltip>
                         </div>}
-                        {record.type === 'Folder' && current.root === null && <div className="d-flex justify-content-evenly">
-                            <Tooltip title="Xóa file">
+                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                            {current.root === null && <Tooltip title="Share">
                                 <ShareFolderButton {...record} />
+                            </Tooltip>}
+                            <Tooltip title="Remove">
+                                <DeleteButton 
+                                    type="Folder" 
+                                    name={record.name} 
+                                    handleDelete={() => window.contract.remove_shared_folder({_folder: record.id})}
+                                />
                             </Tooltip>
                         </div>}
                     </div>
@@ -287,7 +295,7 @@ export default function Shared() {
         <>
         <div id="homepage">
             <div className="header">
-                <h2 className="title">Shared Folder</h2>
+                <h2 className="title">Shared folder</h2>
                 <hr />
             </div>
             <div className="content">

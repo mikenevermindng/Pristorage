@@ -31,11 +31,13 @@ export async function initContract() {
       'create_folder', 
       'create_shared_folder', 
       'create_file', 
-      'remove_file', 
-      'remove_folder',
       'create_shared_folder_file',
       'share_file',
-      'share_folder'
+      'share_folder',
+      'remove_file', 
+      'remove_folder',
+      'remove_shared_file',
+      'remove_shared_folder'
     ],
   })
 }

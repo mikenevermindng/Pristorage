@@ -167,10 +167,10 @@ export default function MainLayout({children}) {
                     <div className="logo"></div>
                     <Menu theme="dark" mode="inline">
                         <Menu.Item key="1" icon={<DatabaseOutlined />}>
-                            <Link to="/">Private Storage</Link>
+                            <Link to="/">My Folders</Link>
                         </Menu.Item>
                         <Menu.Item key="2" icon={<UsergroupAddOutlined />}>
-                            <Link to="/shared">Shared Folder</Link>
+                            <Link to="/shared">Shared Folders</Link>
                         </Menu.Item>
                         <Menu.Item key="3" icon={<UserSwitchOutlined />}>
                             <Link to="/shared_file_to_me">File Shared With Me</Link>
