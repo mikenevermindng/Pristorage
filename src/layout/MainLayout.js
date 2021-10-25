@@ -35,7 +35,7 @@ import { useSelector, useDispatch } from 'react-redux';
 const { TextArea } = Input;
 
 const signupValidationSchema = Yup.object().shape({
-    token: Yup.string().test('Xác minh cụm từ khôi phục', 'Mật khẩu không hợp lệ', value => {
+    token: Yup.string().test('Validate password', 'Invalid password', value => {
         return new Promise((resolve, reject) => {
             validateToken(value).then(result => {
                 console.log(result);
@@ -43,14 +43,14 @@ const signupValidationSchema = Yup.object().shape({
             })
         });
         
-    }).required('Web3 storage token không được bổ trống')
+    }).required('Invalid Web3 storage token')
 });
 
 const loginValidationSchema = Yup.object().shape({
-    seedPhrase: Yup.string().test('Kiểm tra mật khẩu', 'Token không hợp lệ', value => {
+    seedPhrase: Yup.string().test('Validate password', 'Invalid password', value => {
         return value.split(" ").length === 12
         
-    }).required('Web3 storage token không được bổ trống')
+    }).required('Invalid Web3 storage token')
 });
 
 export default function MainLayout({children}) {
@@ -151,7 +151,7 @@ export default function MainLayout({children}) {
                     const response = await dispatch(fetchUserInfo(private_key))
                     const user = unwrapResult(response)
                     if (!user.success) {
-                        message.error("Mật khẩu không đúng")
+                        message.error("Wrong password")
                         showLoginModal()
                     }
                 }
@@ -201,7 +201,7 @@ export default function MainLayout({children}) {
             </Layout>
             <Modal
                 visible={isModalLoginVisible}
-                title="Vui lòng nhập cụm từ khôi phục"
+                title="Your password"
                 onOk={loginHandleSubmit}
                 footer={[
                     <Button
@@ -210,14 +210,14 @@ export default function MainLayout({children}) {
                         onClick={loginHandleSubmit}
                         key="signup button"
                     >
-                        Đăng nhập
+                        Login
                     </Button>,
                 ]}
             >
                 <div className="input-group mb-3">
-                    <label className="form-label">Mật khẩu</label>
+                    <label className="form-label">Password</label>
                     <TextArea 
-                        placeholder="Mật khẩu" 
+                        placeholder="Password" 
                         onChange={loginHandleChange('seedPhrase')}
                     />
                     {loginErrors.seedPhrase && <span className="error-text">{loginErrors.seedPhrase}</span>}
@@ -225,7 +225,7 @@ export default function MainLayout({children}) {
             </Modal>
             <Modal
                 visible={isModalVisible}
-                title="Bạn cần nhập Web3 Storage và Mật khẩu để xử dụng ứng dụng"
+                title="Web3 Storage and Password is required"
                 onOk={handleOk}
                 footer={[
                     <Button
@@ -234,7 +234,7 @@ export default function MainLayout({children}) {
                         onClick={handleOk}
                         key="signup button"
                     >
-                        Đăng ký
+                        Register
                     </Button>,
                 ]}
             >

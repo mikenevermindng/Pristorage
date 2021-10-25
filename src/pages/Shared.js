@@ -45,7 +45,7 @@ import ShareFolderButton from '../components/ShareFolderButton'
 const { Dragger } = Upload;
 
 const folderValidationSchema = Yup.object().shape({
-    name: Yup.string().required('Tên thư mục không được bỏ trống'),
+    name: Yup.string().required('Invalid folder name'),
 });
 
 export default function Shared() {
@@ -243,7 +243,7 @@ export default function Shared() {
                 return (
                     <div>
                         {record.type === 'File' && <div className="d-flex justify-content-evenly">
-                            <Tooltip title="Tải xuống">
+                            <Tooltip title="Download">
                                 <Button
                                     onClick={async () => {
                                         const {root} = current
@@ -318,7 +318,7 @@ export default function Shared() {
                             icon={<UploadOutlined style={{ fontSize: '18px' }} />} 
                             onClick={showModalUpload}
                         >
-                            Đăng tải file
+                            Upload file
                         </Button>
                         <Modal 
                             title="Tạo thư mục" 

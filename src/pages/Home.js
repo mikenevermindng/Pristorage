@@ -35,7 +35,7 @@ import ShareFileButton from '../components/ShareFileButton'
 const { Dragger } = Upload;
 
 const folderValidationSchema = Yup.object().shape({
-    name: Yup.string().required('Tên thư mục không được bỏ trống'),
+    name: Yup.string().required('Invalid name'),
 });
 
 export default function Home() {
@@ -249,7 +249,7 @@ export default function Home() {
         <>
         <div id="homepage">
             <div className="header">
-                <h2 className="title">Thư mục của tôi</h2>
+                <h2 className="title">Private Storage</h2>
                 <hr />
             </div>
             <div className="content">
@@ -280,7 +280,7 @@ export default function Home() {
                             icon={<UploadOutlined style={{ fontSize: '18px' }} />} 
                             onClick={showModalUpload}
                         >
-                            Đăng tải file
+                            Upload file
                         </Button>
                         <Modal 
                             title="Tạo thư mục" 
