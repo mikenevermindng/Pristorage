@@ -260,7 +260,7 @@ export default function Home() {
                             onClick={showModalCreateFolder} 
                             loading={commonFolderLoading} 
                         >
-                            Tạo thư mục
+                            Create folder
                         </Button>
                         <Modal 
                             title="Tạo thư mục" 
@@ -268,7 +268,7 @@ export default function Home() {
                             onOk={handleSubmit} 
                             onCancel={handleCancelCreateFolder}
                         >
-                            <label className="form-label">Tên thư mục</label>
+                            <label className="form-label">Folder name</label>
                             <div className="input-group mb-3">
                                 <Input placeholder="Tên thư mục" onChange={handleChange('name')} />
                             </div>

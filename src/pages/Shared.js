@@ -287,7 +287,7 @@ export default function Shared() {
         <>
         <div id="homepage">
             <div className="header">
-                <h2 className="title">Thư mục chia sẻ</h2>
+                <h2 className="title">Shared Folder</h2>
                 <hr />
             </div>
             <div className="content">
@@ -298,7 +298,7 @@ export default function Shared() {
                             onClick={showModalCreateFolder} 
                             loading={loading} 
                         >
-                            Tạo thư mục
+                            Create folder
                         </Button>
                         <Modal 
                             title="Tạo thư mục" 
@@ -306,7 +306,7 @@ export default function Shared() {
                             onOk={handleSubmit} 
                             onCancel={handleCancelCreateFolder}
                         >
-                            <label className="form-label">Tên thư mục</label>
+                            <label className="form-label">Folder name</label>
                             <div className="input-group mb-3">
                                 <Input placeholder="Tên thư mục" onChange={handleChange('name')} />
                             </div>
