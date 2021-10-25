@@ -77,8 +77,7 @@ export default function Shared() {
                     _account_id: accountId
                 }
                 const data = await window.contract.create_shared_folder(folder)
-                console.log(data)
-                // history.go(0)
+                history.go(0)
             } else {
                 message.error('fail to encode password')
             }
@@ -154,10 +153,8 @@ export default function Shared() {
         const {root} = current
         if (root) {
             const {folder_password: folderPassword} = root
-            console.log(folderPassword)
             const MattsRSAkey = createKeyPair(userCurrent.privateKey);
             const {status, plaintext: folderDecryptedPassword} = rsaDecrypt(folderPassword, MattsRSAkey)
-            console.log(folderDecryptedPassword)
             if (status === "success") {
                 const worker = new Worker('../worker.js')
                 const {encryptByWorker} = wrap(worker)
@@ -257,7 +254,6 @@ export default function Shared() {
                                             const worker = new Worker('../worker.js')
                                             const {decryptByWorker} = wrap(worker)
                                             const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                            console.log(decryptedFile)
                                             concatenateBlobs(decryptedFile, record.file_type, (blob) => {
                                                 saveFile(blob, record.name)
                                             })
