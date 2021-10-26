@@ -66,6 +66,7 @@ export default function MainLayout({children}) {
 
     useEffect(() => {
         const currentURL = window.location.href
+        console.log(currentURL)
         if (currentURL.includes('login')) {
             setHideLayout(true)
         } else {
@@ -172,7 +173,7 @@ export default function MainLayout({children}) {
 
     return (
         <div id="page-layout-trigger">
-            <Layout>
+            {isHideLayout ? <div>{children}</div> : <Layout>
                 <Sider trigger={null} collapsible collapsed={collapsed}>
                     <div className="logo"></div>
                     <Menu theme="dark" mode="inline">
@@ -183,10 +184,10 @@ export default function MainLayout({children}) {
                             <Link to="/shared">Shared Folders</Link>
                         </Menu.Item>
                         <Menu.Item key="3" icon={<UserSwitchOutlined />}>
-                            <Link to="/shared_file_to_me">File Shared With Me</Link>
+                            <Link to="/shared_file_to_me">Files Shared With Me</Link>
                         </Menu.Item>
                         <Menu.Item key="4" icon={<UserSwitchOutlined />}>
-                            <Link to="/shared_folder_to_me">Folder Shared With Me</Link>
+                            <Link to="/shared_folder_to_me">Folders Shared With Me</Link>
                         </Menu.Item>
                     </Menu>
                 </Sider>
@@ -215,7 +216,7 @@ export default function MainLayout({children}) {
                         {children}
                     </Content>
                 </Layout>
-            </Layout>
+            </Layout>}
             <Modal
                 visible={isModalLoginVisible}
                 title="Your password"

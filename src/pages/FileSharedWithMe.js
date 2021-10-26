@@ -105,7 +105,7 @@ export default function Shared() {
         <>
         <div>
             <div className="header">
-                <h2 className="title">File shared with me</h2>
+                <h2 className="title">Files shared with me</h2>
                 <hr />
             </div>
             <div className="content">

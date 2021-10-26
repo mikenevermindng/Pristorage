@@ -35,12 +35,11 @@ export default function LoginPage() {
                         <div className="login-content">
                             <form onSubmit={submitHandler}>
                                 <img src={avatar} alt="" />
-                                <h2 className="title">Vi Storage</h2>
-                                <h4>Bạn cần tạo ví Near để đăng nhập</h4>
+                                <h2 className="title">PriStorage</h2>
                                 <input
                                     className="btn"
                                     type="submit"
-                                    value=" Đăng nhập với NEAR"
+                                    value=" Login with NEAR"
                                 />
                             </form>
                         </div>
