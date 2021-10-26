@@ -160,11 +160,11 @@ export default function Shared() {
                 const worker = new Worker('../worker.js')
                 const {encryptByWorker} = wrap(worker)
                 const encryptedFiles = await encryptByWorker(file, folderDecryptedPassword)
-                if (status === "success") {
-                    await storeToWeb3Storage(encryptedFiles, file.name, file.type)
-                    setIsModalUploadVisible(false)
-                    history.go(0)
-                }
+                await storeToWeb3Storage(encryptedFiles, file.name, file.type)
+                setIsModalUploadVisible(false)
+                history.go(0)
+            } else {
+                message.error('Fail to encrypt file ' + file.name)
             }
             
         }
@@ -258,8 +258,9 @@ export default function Shared() {
                                             concatenateBlobs(decryptedFile, record.file_type, (blob) => {
                                                 saveFile(blob, record.name)
                                             })
+                                        } else {
+                                            message.error('Fail to download file')
                                         }
-                                        
                                     }}
                                 >
                                     <DownloadOutlined />

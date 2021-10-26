@@ -86,6 +86,8 @@ export default function MainLayout({children}) {
                 window.localStorage.setItem(`${accountId}_web3_storage_token`, values.token)
                 await window.contract.sign_up({public_key: MattsPublicKeyString, encrypted_token: cipher})
                 setIsModalVisible(false)
+            } else {
+                message.error('Fail to sign up')
             }
         }
     })

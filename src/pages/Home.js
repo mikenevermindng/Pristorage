@@ -7,8 +7,19 @@ import {
     DownloadOutlined,
     ShareAltOutlined
 } from '@ant-design/icons';
-import { Button, Table, Modal, Input, Upload, message, Tooltip } from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
+import { 
+    Button, 
+    Table, 
+    Modal, 
+    Input, 
+    Upload, 
+    message, 
+    Tooltip 
+} from 'antd';
+import { 
+    useSelector, 
+    useDispatch 
+} from 'react-redux';
 import {getFolderInfo} from '../store/slice/commonFolder.slice'
 import { v4 as uuidv4 } from 'uuid';
 import {wrap} from 'comlink'
@@ -137,6 +148,8 @@ export default function Home() {
             await storeToWeb3Storage(encryptedFiles, file.name, file.type, cipher)
             setIsModalUploadVisible(false)
             history.go(0)
+        } else {
+            message.error('Fail to encrypt file ' + file.name)
         }
     }
 
@@ -228,6 +241,8 @@ export default function Home() {
                                             concatenateBlobs(decryptedFile, record.file_type, (blob) => {
                                                 saveFile(blob, record.name)
                                             })
+                                        } else {
+                                            message.error('Fail to download file')
                                         }
                                     }}
                                 >

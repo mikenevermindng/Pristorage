@@ -82,6 +82,8 @@ export default function Shared() {
                                             concatenateBlobs(decryptedFile, record.file_type, (blob) => {
                                                 saveFile(blob, record.name)
                                             })
+                                        } else {
+                                            message.error('fail to download file')
                                         }
                                     }}
                                 >
