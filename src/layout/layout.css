@@ -35,3 +35,11 @@
 .site-layout .site-layout-background {
     background: #fff;
 }
+
+.site-layout .account {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+    font-weight: 400;
+    font-size: 16px;
+}

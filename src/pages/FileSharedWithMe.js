@@ -63,6 +63,10 @@ export default function Shared() {
             dataIndex: 'file_type',
         },
         {
+            title: 'Owner',
+            dataIndex: 'owner',
+        },
+        {
             title: '',
             render(text, record) {
                 return (

@@ -99,6 +99,13 @@ export default function Shared() {
             dataIndex: 'type',
         },
         {
+            title: 'Owner',
+            dataIndex: 'owner',
+            render(text, record) {
+                return <span>{record.isTop ? "" : record.owner}</span>
+            }
+        },
+        {
             title: '',
             render(text, record) {
                 return (
@@ -161,6 +168,7 @@ export default function Shared() {
                     name: "...",
                     id: foldersSharedWithMe.parent,
                     owner: foldersSharedWithMe.owner,
+                    isTop: true,
                 },
                 ...folders, 
                 ...files
@@ -171,6 +179,7 @@ export default function Shared() {
                     name: "...",
                     id: foldersSharedWithMe.parent,
                     owner: foldersSharedWithMe.owner,
+                    isTop: true,
                 },
                 ...folders, 
                 ...files

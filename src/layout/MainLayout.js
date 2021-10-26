@@ -184,10 +184,17 @@ export default function MainLayout({children}) {
                 </Sider>
                 <Layout className="site-layout">
                     <Header className="site-layout-background" style={{ padding: 0 }}>
-                        {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
-                            className: 'trigger',
-                            onClick: toggle,
-                        })}
+                        <div className="d-flex justify-content-between">
+                            <div>
+                                {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
+                                    className: 'trigger',
+                                    onClick: toggle,
+                                })}
+                            </div>
+                            <div className="account">
+                                {current.account}
+                            </div>
+                        </div>
                     </Header>
                     <Content
                         className="site-layout-background"
