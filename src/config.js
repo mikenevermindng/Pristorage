@@ -1,18 +1,18 @@
-const CONTRACT_NAME = process.env.CONTRACT_NAME || 'Vi storage 2.0'
+const CONTRACT_NAME = process.env.CONTRACT_NAME || 'manhnv_mdev.testnet'
 
 function getConfig(env) {
   switch (env) {
 
   case 'production':
   case 'mainnet':
-    return {
-      networkId: 'mainnet',
-      nodeUrl: 'https://rpc.mainnet.near.org',
-      contractName: CONTRACT_NAME,
-      walletUrl: 'https://wallet.near.org',
-      helperUrl: 'https://helper.mainnet.near.org',
-      explorerUrl: 'https://explorer.mainnet.near.org',
-    }
+    // return {
+    //   networkId: 'mainnet',
+    //   nodeUrl: 'https://rpc.mainnet.near.org',
+    //   contractName: CONTRACT_NAME,
+    //   walletUrl: 'https://wallet.near.org',
+    //   helperUrl: 'https://helper.mainnet.near.org',
+    //   explorerUrl: 'https://explorer.mainnet.near.org',
+    // }
   case 'development':
   case 'testnet':
     return {

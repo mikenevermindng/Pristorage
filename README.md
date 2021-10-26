@@ -1,4 +1,4 @@
-Vi storage 2.0
+Vi storage
 ==================
 
 This [React] app was initialized with [create-near-app]

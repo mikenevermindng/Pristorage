@@ -62,6 +62,16 @@ export default function MainLayout({children}) {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isModalLoginVisible, setIsModalLoginVisible] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isHideLayout, setHideLayout] = useState(false);
+
+    useEffect(() => {
+        const currentURL = window.location.href
+        if (currentURL.includes('login')) {
+            setHideLayout(true)
+        } else {
+            setHideLayout(false)
+        }
+    }, [])
 
     const {current} = useSelector(state => state.user)
 
@@ -135,8 +145,6 @@ export default function MainLayout({children}) {
     const handleLoginOk = () => {
 
     }
-
-
 
     useEffect(() => {
         const checkBeforeEnter = async () => {
