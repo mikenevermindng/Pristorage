@@ -1,4 +1,4 @@
-Vi storage
+PriStorage
 ==================
 
 This [React] app was initialized with [create-near-app]
