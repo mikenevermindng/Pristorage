@@ -1,9 +1,9 @@
 import React, {useState, useEffect} from 'react'
 import { useHistory } from "react-router-dom";
 import './style/LoginPage.module.css'
-import wave from '../assets/wave.png'
-import avatar from '../assets/avatar.svg'
-import doc from '../assets/doc.svg'
+// import wave from './wave.png'
+// import avatar from './avatar.svg'
+// import doc from './doc.svg'
 import {login} from '../utils/near.utils'
 
 export default function LoginPage() {
@@ -27,14 +27,14 @@ export default function LoginPage() {
         return (
             <>
                 <div className="login-screen">
-                    <img className="login-wave" src={wave} alt="" />
+                    <img className="login-wave" src="/wave.png" alt="" />
                     <div className="login-container">
                         <div className="login-img">
-                            <img src={doc} alt="" />
+                            <img src="/doc.svg" alt="" />
                         </div>
                         <div className="login-content">
                             <form onSubmit={submitHandler}>
-                                <img src={avatar} alt="" />
+                                <img src="/avatar.svg" alt="" />
                                 <h2 className="title">PriStorage</h2>
                                 <input
                                     className="btn"
@@ -52,14 +52,14 @@ export default function LoginPage() {
     return (
         <>
             <div className="login-screen">
-                <img className="login-wave" src={wave} alt="" />
+                <img className="login-wave" src="/wave.png" alt="" />
                 <div className="login-container">
                     <div className="login-img">
-                        <img src={doc} alt="" />
+                        <img src="/doc.svg" alt="" />
                     </div>
                     <div className="login-content">
                         <form onSubmit={submitHandler}>
-                            <img src={avatar} alt="" />
+                            <img src="/avatar.svg" alt="" />
                             <h2 className="title">Vi Storage</h2>
                             <h3>Bạn đã đăng nhập thành công</h3>
                         </form>
