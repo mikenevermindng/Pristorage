@@ -171,23 +171,25 @@ export default function MainLayout({children}) {
         checkBeforeEnter()
     }, [])
 
+    const redirect = (path) => {
+        history.push(path)
+        history.go(0)
+    }
+
     return (
         <div id="page-layout-trigger">
             {isHideLayout ? <div>{children}</div> : <Layout>
                 <Sider trigger={null} collapsible collapsed={collapsed}>
                     <div className="logo"></div>
                     <Menu theme="dark" mode="inline">
-                        <Menu.Item key="1" icon={<DatabaseOutlined />}>
-                            <Link to="/">My Folders</Link>
+                        <Menu.Item key="1" icon={<DatabaseOutlined />} onClick={() => redirect("/")}>
+                            My Folders
                         </Menu.Item>
-                        <Menu.Item key="2" icon={<UsergroupAddOutlined />}>
-                            <Link to="/shared">Shared Folders</Link>
+                        <Menu.Item key="2" icon={<UsergroupAddOutlined />} onClick={() => redirect("/shared")}>
+                            Shared Folders
                         </Menu.Item>
-                        <Menu.Item key="3" icon={<UserSwitchOutlined />}>
-                            <Link to="/shared_file_to_me">Files Shared With Me</Link>
-                        </Menu.Item>
-                        <Menu.Item key="4" icon={<UserSwitchOutlined />}>
-                            <Link to="/shared_folder_to_me">Folders Shared With Me</Link>
+                        <Menu.Item key="4" icon={<UserSwitchOutlined />} onClick={() => redirect("/shared_with_me")}>
+                            Shared With Me
                         </Menu.Item>
                     </Menu>
                 </Sider>

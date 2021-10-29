@@ -7,7 +7,7 @@
 
 # build
 /out
-/dist
+# /dist
 
 # keys
 /neardev

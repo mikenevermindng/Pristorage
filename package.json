@@ -1,6 +1,7 @@
 {
   "name": "pristorage",
   "version": "0.1.0",
+  "main": "electron.js",
   "license": "UNLICENSED",
   "scripts": {
     "build": "npm run build:contract && npm run build:web",
@@ -14,7 +15,9 @@
     "prestart": "npm run build:contract:debug && npm run dev:deploy:contract",
     "start": "echo The app is starting! It will automatically open in your browser when ready && env-cmd -f ./neardev/dev-account.env parcel src/index.html --open",
     "dev": "nodemon --watch contract/src -e rs --exec \"npm run start\"",
-    "test": "npm run build:contract:debug && cd contract && cargo test -- --nocapture && cd .. && jest test --runInBand"
+    "test": "npm run build:contract:debug && cd contract && cargo test -- --nocapture && cd .. && jest test --runInBand",
+    "electron-build": "electron-builder",
+    "electron:build": "npm run electron-build"
   },
   "devDependencies": {
     "@babel/core": "~7.14.0",
@@ -51,6 +54,7 @@
     "react-redux": "^7.2.5",
     "react-router-dom": "^5.3.0",
     "regenerator-runtime": "~0.13.5",
+    "tweetnacl": "^1.0.3",
     "uuid": "^8.3.2",
     "web3.storage": "^3.3.2",
     "yup": "^0.32.11"
@@ -83,5 +87,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "build": {
+    "appId": "com.pri-storage.app"
   }
 }

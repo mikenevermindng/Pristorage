@@ -38,6 +38,7 @@ import {wrap} from 'comlink'
 import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import {useHistory} from 'react-router-dom'
+import {getSharedFileInfo} from '../store/slice/sharedFileWithMe.slice'
 
 const { TabPane } = Tabs;
 
@@ -48,6 +49,7 @@ export default function Shared() {
     const [data, setData] = useState([])
     const dispatch = useDispatch()
     const {current: foldersSharedWithMe, loading: foldersSharedWithMeLoading, root: rootFoldersSharedToMe } = useSelector(state => state.sharedFolderWithMe)
+    const {current: filesSharedWithMe, loading: filesSharedWithMeLoading} = useSelector(state => state.sharedFileWithMe)
     const {loading: loadingCurrent, current: userCurrent} = useSelector(state => state.user)
     
     useEffect(() => {
@@ -58,7 +60,10 @@ export default function Shared() {
             console.log(folderId, owner)
             if (folderId) {
                 await dispatch(getSharedFolderById({id: folderId, owner: owner}))
-            } 
+            } else {
+                console.log('calling function')
+                await dispatch(getSharedFileInfo());
+            }
         }
         fetchData()
     }, [])
@@ -73,6 +78,55 @@ export default function Shared() {
             history.go(0)
         }
         
+    }
+
+    const downloadFileInSharedFolder = async (record) => {
+        const {rootId} = foldersSharedWithMe
+        const sharedDoc = rootFoldersSharedToMe.find(doc => doc.id === rootId)
+        if (sharedDoc) {
+            const {sharedPassword} = sharedDoc
+            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+            const {plaintext, status} = rsaDecrypt(sharedPassword, MattsRSAkey)
+            if (status === "success") {
+                const files = await retrieveFiles(record.cid)
+                const worker = new Worker('../worker.js')
+                const {decryptByWorker} = wrap(worker)
+                const decryptedFile = await decryptByWorker(files, record.name, plaintext)
+                console.log(decryptedFile)
+                concatenateBlobs(decryptedFile, record.file_type, (blob) => {
+                    saveFile(blob, record.name)
+                })
+            } else {
+                message.error('Fail to decrypt folder password')
+            }
+        } else {
+            message.error('Fail to decrypt folder password')
+        }
+    }
+
+    const downloadSharedFile = async (record) => {
+        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+        const {plaintext, status} = rsaDecrypt(record.sharedPassword, MattsRSAkey)
+        if (status === "success") {
+            const files = await retrieveFiles(record.cid)
+            const worker = new Worker('../worker.js')
+            const {decryptByWorker} = wrap(worker)
+            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
+            console.log(decryptedFile)
+            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
+                saveFile(blob, record.name)
+            })
+        } else {
+            message.error('fail to download file')
+        }
+    }
+
+    const download = async (record) => {
+        if (record.isSharedFolderFile) {
+            await downloadFileInSharedFolder(record)
+        } else {
+            await downloadSharedFile(record)
+        }
     }
 
     const columns = [
@@ -112,31 +166,7 @@ export default function Shared() {
                     <div>
                         {record.type === 'File' && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
-                                <Button
-                                    onClick={async () => {
-                                        const {rootId} = foldersSharedWithMe
-                                        const sharedDoc = rootFoldersSharedToMe.find(doc => doc.id === rootId)
-                                        if (sharedDoc) {
-                                            const {sharedPassword} = sharedDoc
-                                            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                            const {plaintext, status} = rsaDecrypt(sharedPassword, MattsRSAkey)
-                                            if (status === "success") {
-                                                const files = await retrieveFiles(record.cid)
-                                                const worker = new Worker('../worker.js')
-                                                const {decryptByWorker} = wrap(worker)
-                                                const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                                console.log(decryptedFile)
-                                                concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                                                    saveFile(blob, record.name)
-                                                })
-                                            } else {
-                                                message.error('Fail to decrypt folder password')
-                                            }
-                                        } else {
-                                            message.error('Fail to decrypt folder password')
-                                        }
-                                    }}
-                                >
+                                <Button onClick={() => download(record)}>
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
@@ -152,7 +182,8 @@ export default function Shared() {
             return {
                 id: file.cid,
                 ...file,
-                type: 'File'
+                type: 'File',
+                isSharedFolderFile: true,
             }
         })
         const folders = foldersSharedWithMe.children.map(child => {
@@ -162,6 +193,15 @@ export default function Shared() {
                 type: 'Folder'
             }
         })
+        const sharedFiles = filesSharedWithMe.map(file => {
+            return {
+                id: file.cid,
+                ...file,
+                type: 'File',
+                isSharedFolderFile: false,
+            }
+        })
+        console.log(filesSharedWithMe, sharedFiles)
         if (foldersSharedWithMe.owner === foldersSharedWithMe.parent) {
             setData([
                 {
@@ -171,7 +211,8 @@ export default function Shared() {
                     isTop: true,
                 },
                 ...folders, 
-                ...files
+                ...files,
+                ...sharedFiles
             ])
         } else {
             setData([
@@ -182,16 +223,17 @@ export default function Shared() {
                     isTop: true,
                 },
                 ...folders, 
-                ...files
+                ...files,
+                ...sharedFiles
             ])
         }
-    }, [foldersSharedWithMe])
+    }, [foldersSharedWithMe, filesSharedWithMe])
 
     return (
         <>
         <div>
             <div className="header">
-                <h2 className="title">Folders shared with me</h2>
+                <h2 className="title">Shared with me</h2>
                 <hr />
             </div>
             <div className="content">

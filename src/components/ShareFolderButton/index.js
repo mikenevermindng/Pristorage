@@ -20,7 +20,7 @@ import { useFormik } from 'formik';
 import { useDispatch, useSelector } from 'react-redux';
 
 const accountValidationSchema = Yup.object().shape({
-    account: Yup.string().required('Tài khoản không được bỏ trống'),
+    account: Yup.string().required('Invalid account id'),
 });
 
 const ShareFolderButton = (props) => {
@@ -93,9 +93,9 @@ const ShareFolderButton = (props) => {
             onOk={accountHandleSubmit} 
             onCancel={handleCancelShare}
         >
-            <label className="form-label">Chia sẻ với tài khoản</label>
+            <label className="form-label">Share with</label>
             <div className="input-group mb-3">
-                <Input placeholder="Tên thư mục" onChange={accountHandleChange('account')} />
+                <Input placeholder="Account id" onChange={accountHandleChange('account')} />
             </div>
             {accountErrors.account && <span className="error-text">{accountErrors.account}</span>}
         </Modal>

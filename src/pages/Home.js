@@ -296,14 +296,14 @@ export default function Home() {
                             Create folder
                         </Button>
                         <Modal 
-                            title="Tạo thư mục" 
+                            title="Create folder" 
                             visible={isModalCreateFolderVisible} 
                             onOk={handleSubmit} 
                             onCancel={handleCancelCreateFolder}
                         >
                             <label className="form-label">Folder name</label>
                             <div className="input-group mb-3">
-                                <Input placeholder="Tên thư mục" onChange={handleChange('name')} />
+                                <Input placeholder="Folder name" onChange={handleChange('name')} />
                             </div>
                             {errors.name && <span className="error-text">{errors.name}</span>}
                         </Modal>
@@ -316,7 +316,7 @@ export default function Home() {
                             Upload file
                         </Button>
                         <Modal 
-                            title="Tạo thư mục" 
+                            title="Upload file" 
                             visible={isModalUploadVisible} 
                             onCancel={handleCancelUpload}
                             footer={[]}

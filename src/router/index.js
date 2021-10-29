@@ -2,7 +2,7 @@ import LoginPage from "../pages/Login"
 import Home from '../pages/Home'
 import Shared from '../pages/Shared'
 import FileSharedWithMe from '../pages/FileSharedWithMe'
-import FolderSharedWithMe from '../pages/FolderSharedWithMe'
+import FolderSharedWithMe from '../pages/SharedWithMe'
 
 const isAuthenticated = () => {
     return window.walletConnection.isSignedIn()
@@ -19,12 +19,7 @@ const routers = [
         beforeRouteEnter: isAuthenticated
     },
     {
-        path: '/shared_file_to_me',
-        component: FileSharedWithMe,
-        beforeRouteEnter: isAuthenticated
-    },
-    {
-        path: '/shared_folder_to_me',
+        path: '/shared_with_me',
         component: FolderSharedWithMe,
         beforeRouteEnter: isAuthenticated
     },

@@ -43,6 +43,23 @@ export default function Shared() {
         dispatch(getSharedFileInfo());
     }, [])
 
+    const downloadSharedFile = async (record) => {
+        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
+        const {plaintext, status} = rsaDecrypt(record.sharedPassword, MattsRSAkey)
+        if (status === "success") {
+            const files = await retrieveFiles(record.cid)
+            const worker = new Worker('../worker.js')
+            const {decryptByWorker} = wrap(worker)
+            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
+            console.log(decryptedFile)
+            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
+                saveFile(blob, record.name)
+            })
+        } else {
+            message.error('fail to download file')
+        }
+    }
+
     const columns = [
         {
             title: 'Name',
@@ -73,24 +90,7 @@ export default function Shared() {
                     <div>
                         <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
-                                <Button
-                                    onClick={async () => {
-                                        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                        const {plaintext, status} = rsaDecrypt(record.sharedPassword, MattsRSAkey)
-                                        if (status === "success") {
-                                            const files = await retrieveFiles(record.cid)
-                                            const worker = new Worker('../worker.js')
-                                            const {decryptByWorker} = wrap(worker)
-                                            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                            console.log(decryptedFile)
-                                            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                                                saveFile(blob, record.name)
-                                            })
-                                        } else {
-                                            message.error('fail to download file')
-                                        }
-                                    }}
-                                >
+                                <Button onClick={() => downloadSharedFile(record)} >
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
