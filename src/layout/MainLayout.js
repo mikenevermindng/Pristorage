@@ -97,6 +97,7 @@ export default function MainLayout({children}) {
                 window.localStorage.setItem(`${accountId}_web3_storage_token`, values.token)
                 await window.contract.sign_up({public_key: MattsPublicKeyString, encrypted_token: cipher})
                 setIsModalVisible(false)
+                history.go(0)
             } else {
                 message.error('Fail to sign up')
             }
@@ -132,7 +133,9 @@ export default function MainLayout({children}) {
     };
     
     const handleOk = () => {
-        handleSubmit()
+        handleSubmit().then(() => {
+            history.go(0)
+        })
     };
     
     const handleCancel = () => {
@@ -149,23 +152,21 @@ export default function MainLayout({children}) {
 
     useEffect(() => {
         const checkBeforeEnter = async () => {
-            const account = await window.walletConnection.account()
-            const account_id = account.accountId
-            const user = await window.contract.get_user({account_id})
-            if (!user) {
-                showModal()
-            } else {
-                const private_key = window.localStorage.getItem(`${account_id}_private_key`)
-                if (!private_key) {
-                    setIsModalLoginVisible(true)
+            const {accountId} = await window.walletConnection.account()
+            const private_key = window.localStorage.getItem(`${accountId}_private_key`)
+            try {
+                const user = await window.contract.get_user({account_id: accountId})
+                if (!user) {
+                    showModal()
                 } else {
-                    const response = await dispatch(fetchUserInfo(private_key))
-                    const user = unwrapResult(response)
-                    if (!user.success) {
-                        message.error("Wrong password")
-                        showLoginModal()
+                    if (!private_key) {
+                        setIsModalLoginVisible(true)
+                    } else {
+                        const response = await dispatch(fetchUserInfo(private_key))
                     }
                 }
+            } catch(error) {
+                console.log(error)
             }
         }
         checkBeforeEnter()
@@ -245,7 +246,7 @@ export default function MainLayout({children}) {
             </Modal>
             <Modal
                 visible={isModalVisible}
-                title="Web3 Storage and Password is required"
+                title="Web3 Storage token is required"
                 onOk={handleOk}
                 footer={[
                     <Button

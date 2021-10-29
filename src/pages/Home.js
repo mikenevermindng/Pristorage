@@ -5,7 +5,9 @@ import {
     UploadOutlined,
     InboxOutlined,
     DownloadOutlined,
-    ShareAltOutlined
+    ShareAltOutlined,
+    FolderOpenOutlined,
+    FileProtectOutlined
 } from '@ant-design/icons';
 import { 
     Button, 
@@ -158,20 +160,23 @@ export default function Home() {
             return {
                 id: file.cid,
                 ...file,
-                type: 'File'
+                isFolder: false
             }
         })
         const folders = commonFolderCurrent.children.map(child => {
             return {
                 id: child.id,
                 ...child,
-                type: 'Folder'
+                isFolder: true,
+                children: null,
             }
         })
         setData([
             {
                 name: "...",
-                id: commonFolderCurrent.parent
+                id: commonFolderCurrent.parent,
+                isFolder: true,
+                isTop: true
             },
             ...folders, 
             ...files]
@@ -205,9 +210,9 @@ export default function Home() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type !== 'File'  ? 
-                            <a onClick={() => redirectToFolder(record.id)}>{record.name}</a>:
-                            <span>{record.name}</span>
+                        {record.isFolder  ? 
+                            <a onClick={() => redirectToFolder(record.id)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
+                            <span><FileProtectOutlined /> {record.name}</span>
                         }
                     </div>
                 )
@@ -218,15 +223,11 @@ export default function Home() {
             dataIndex: 'file_type',
         },
         {
-            title: 'Folder/File',
-            dataIndex: 'type',
-        },
-        {
             title: '',
             render(text, record) {
                 return (
                     <div>
-                        {record.type === 'File' && <div className="d-flex justify-content-evenly">
+                        {!record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
                                 <Button
                                     onClick={async () => {
@@ -258,16 +259,22 @@ export default function Home() {
                                 <DeleteButton 
                                     type="File" 
                                     name={record.name} 
-                                    handleDelete={() => window.contract.remove_file({_folder: commonFolderCurrent.id, _file: record.id})}
+                                    handleDelete={async () => {
+                                        await window.contract.remove_file({_folder: commonFolderCurrent.id, _file: record.id})
+                                        history.go(0)
+                                    }}
                                 />
                             </Tooltip>
                         </div>}
-                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                        {record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Remove">
                                 <DeleteButton 
                                     type="Folder" 
                                     name={record.name} 
-                                    handleDelete={() => window.contract.remove_folder({_folder: record.id})}
+                                    handleDelete={async () => {
+                                        await window.contract.remove_folder({_folder: record.id})
+                                        history.go(0)
+                                    }}
                                 />
                             </Tooltip>
                         </div>}

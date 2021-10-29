@@ -1,11 +1,9 @@
 import React, {useState, useEffect} from 'react'
 import './style/General.page.css'
 import {
-    FolderAddOutlined,
-    UploadOutlined,
-    InboxOutlined,
     DownloadOutlined,
-    DeleteOutlined
+    FolderOpenOutlined,
+    FileProtectOutlined
 } from '@ant-design/icons';
 import { 
     Table, 
@@ -58,7 +56,7 @@ export default function Shared() {
             const folderId = getUrlParameter('folder')
             const owner = getUrlParameter('owner')
             console.log(folderId, owner)
-            if (folderId) {
+            if (folderId && owner) {
                 await dispatch(getSharedFolderById({id: folderId, owner: owner}))
             } else {
                 console.log('calling function')
@@ -71,10 +69,10 @@ export default function Shared() {
     const redirectToFolder = (id, owner) => {
         if (id === owner) {
             console.log(id, owner)
-            history.push(`/shared_folder_to_me`)
+            history.push(`/shared_with_me`)
             history.go(0)
         } else {
-            history.push(`/shared_folder_to_me?folder=${id}&owner=${owner}`)
+            history.push(`/shared_with_me?folder=${id}&owner=${owner}`)
             history.go(0)
         }
         
@@ -136,9 +134,9 @@ export default function Shared() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type !== 'File'  ? 
-                            <a onClick={() => redirectToFolder(record.id, record.owner)}>{record.name}</a>:
-                            <span>{record.name}</span>
+                        {record.isFolder  ? 
+                            <a onClick={() => redirectToFolder(record.id, record.owner)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
+                            <span><FileProtectOutlined /> {record.name}</span>
                         }
                     </div>
                 )
@@ -147,10 +145,6 @@ export default function Shared() {
         {
             title: 'Type',
             dataIndex: 'file_type',
-        },
-        {
-            title: 'Folder/File',
-            dataIndex: 'type',
         },
         {
             title: 'Owner',
@@ -164,7 +158,7 @@ export default function Shared() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type === 'File' && <div className="d-flex justify-content-evenly">
+                        {!record.isFolder  && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
                                 <Button onClick={() => download(record)}>
                                     <DownloadOutlined />
@@ -182,7 +176,7 @@ export default function Shared() {
             return {
                 id: file.cid,
                 ...file,
-                type: 'File',
+                isFolder: false,
                 isSharedFolderFile: true,
             }
         })
@@ -190,14 +184,15 @@ export default function Shared() {
             return {
                 id: child.id,
                 ...child,
-                type: 'Folder'
+                isFolder: true,
+                children: null,
             }
         })
         const sharedFiles = filesSharedWithMe.map(file => {
             return {
                 id: file.cid,
                 ...file,
-                type: 'File',
+                isFolder: false,
                 isSharedFolderFile: false,
             }
         })
@@ -208,7 +203,8 @@ export default function Shared() {
                     name: "...",
                     id: foldersSharedWithMe.parent,
                     owner: foldersSharedWithMe.owner,
-                    isTop: true,
+                    isFolder: true,
+                    isTop: true
                 },
                 ...folders, 
                 ...files,
@@ -220,7 +216,8 @@ export default function Shared() {
                     name: "...",
                     id: foldersSharedWithMe.parent,
                     owner: foldersSharedWithMe.owner,
-                    isTop: true,
+                    isFolder: true,
+                    isTop: true
                 },
                 ...folders, 
                 ...files,

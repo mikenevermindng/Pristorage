@@ -5,7 +5,9 @@ import {
     UploadOutlined,
     InboxOutlined,
     DownloadOutlined,
-    DeleteOutlined
+    DeleteOutlined,
+    FolderOpenOutlined,
+    FileProtectOutlined
 } from '@ant-design/icons';
 import { 
     Button, 
@@ -77,7 +79,7 @@ export default function Shared() {
                     _password: cipher,
                     _account_id: accountId
                 }
-                const data = await window.contract.create_shared_folder(folder)
+                await window.contract.create_shared_folder(folder)
                 history.go(0)
             } else {
                 message.error('fail to encode password')
@@ -175,20 +177,23 @@ export default function Shared() {
             return {
                 id: file.cid,
                 ...file,
-                type: 'File'
+                isFolder: false
             }
         })
         const folders = current.children.map(child => {
             return {
                 id: child.id,
                 ...child,
-                type: 'Folder'
+                isFolder: true,
+                children: null,
             }
         })
         setData([
             {
                 name: "...",
-                id: current.parent
+                id: current.parent,
+                isFolder: true,
+                isTop: true
             },
             ...folders, 
             ...files]
@@ -222,9 +227,9 @@ export default function Shared() {
             render(text, record) {
                 return (
                     <div>
-                        {record.type !== 'File'  ? 
-                            <a onClick={() => redirectToFolder(record.id)}>{record.name}</a>:
-                            <span>{record.name}</span>
+                        {record.isFolder  ? 
+                            <a onClick={() => redirectToFolder(record.id)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
+                            <span><FileProtectOutlined /> {record.name}</span>
                         }
                     </div>
                 )
@@ -235,15 +240,11 @@ export default function Shared() {
             dataIndex: 'file_type',
         },
         {
-            title: 'Folder/File',
-            dataIndex: 'type',
-        },
-        {
             title: '',
             render(text, record) {
                 return (
                     <div>
-                        {record.type === 'File' && <div className="d-flex justify-content-evenly">
+                        {!record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
                                 <Button
                                     onClick={async () => {
@@ -270,11 +271,14 @@ export default function Shared() {
                                 <DeleteButton 
                                     type="File" 
                                     name={record.name} 
-                                    handleDelete={() => window.contract.remove_shared_file({_folder: current.id, _file: record.id})}
+                                    handleDelete={async () => {
+                                        window.contract.remove_shared_file({_folder: current.id, _file: record.id})
+                                        history.go(0)
+                                    }}
                                 />
                             </Tooltip>
                         </div>}
-                        {record.type === 'Folder' && <div className="d-flex justify-content-evenly">
+                        {record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             {current.root === null && <Tooltip title="Share">
                                 <ShareFolderButton {...record} />
                             </Tooltip>}
@@ -282,7 +286,10 @@ export default function Shared() {
                                 <DeleteButton 
                                     type="Folder" 
                                     name={record.name} 
-                                    handleDelete={() => window.contract.remove_shared_folder({_folder: record.id})}
+                                    handleDelete={async () => {
+                                        await window.contract.remove_shared_folder({_folder: record.id})
+                                        history.go(0)
+                                    }}
                                 />
                             </Tooltip>
                         </div>}

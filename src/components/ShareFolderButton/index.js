@@ -59,7 +59,7 @@ const ShareFolderButton = (props) => {
                 _share_with: values.account, 
                 _password: cipher
             }
-            const data = await window.contract.share_folder(params)
+            await window.contract.share_folder(params)
             history.go(0)
         }
     })
@@ -88,7 +88,7 @@ const ShareFolderButton = (props) => {
             <ShareAltOutlined />
         </Button>
         <Modal 
-            title="Chia sẻ" 
+            title="Share folder" 
             visible={isModalShareVisible} 
             onOk={accountHandleSubmit} 
             onCancel={handleCancelShare}

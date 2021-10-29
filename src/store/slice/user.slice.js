@@ -10,9 +10,13 @@ export const fetchUserInfo = createAsyncThunk(
     'user/fetchUserInfo',
     async (seedPhrase, thunkApi) => {
         const account = await window.walletConnection.account()
-        const walletConnection = window.walletConnection
         const {accountId} = account
         const user = await window.contract.get_user({account_id: accountId})
+        if (!user) {
+            return {
+                success: false,
+            }
+        }
         const {public_key, encrypted_token} = user
         const MattsRSAkey = createKeyPair(seedPhrase);
         const {status, plaintext} = rsaDecrypt(encrypted_token, MattsRSAkey)
