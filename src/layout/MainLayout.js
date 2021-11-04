@@ -35,7 +35,7 @@ import { useSelector, useDispatch } from 'react-redux';
 const { TextArea } = Input;
 
 const signupValidationSchema = Yup.object().shape({
-    token: Yup.string().test('Validate password', 'Invalid password', value => {
+    token: Yup.string().test('Validate password', 'Invalid Token', value => {
         return new Promise((resolve, reject) => {
             validateToken(value).then(result => {
                 console.log(result);
@@ -149,6 +149,12 @@ export default function MainLayout({children}) {
     const handleLoginOk = () => {
 
     }
+
+    useEffect(() => {
+        if (!current.success && current.status === 1) {
+            showModal()
+        }
+    }, [current])
 
     useEffect(() => {
         const checkBeforeEnter = async () => {

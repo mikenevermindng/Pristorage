@@ -125,7 +125,7 @@ export default function Home() {
             console.log(`UpcommonFolderLoading... ${pct.toFixed(2) * 100}% complete`)
         }
 
-        const cid = await storeFiles(files, onRootCidReady, onStoredChunk)
+        const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
         
         await window.contract.create_file({
             _folder: commonFolderCurrent.id, 
@@ -234,7 +234,7 @@ export default function Home() {
                                         const MattsRSAkey = createKeyPair(userCurrent.privateKey);
                                         const {plaintext, status} = rsaDecrypt(record.encrypted_password, MattsRSAkey)
                                         if (status === "success") {
-                                            const files = await retrieveFiles(record.cid)
+                                            const files = await retrieveFiles(userCurrent.web3token, record.cid)
                                             const worker = new Worker('../worker.js')
                                             const {decryptByWorker} = wrap(worker)
                                             const decryptedFile = await decryptByWorker(files, record.name, plaintext)

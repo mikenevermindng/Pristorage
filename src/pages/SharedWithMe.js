@@ -86,7 +86,7 @@ export default function Shared() {
             const MattsRSAkey = createKeyPair(userCurrent.privateKey);
             const {plaintext, status} = rsaDecrypt(sharedPassword, MattsRSAkey)
             if (status === "success") {
-                const files = await retrieveFiles(record.cid)
+                const files = await retrieveFiles(userCurrent.web3token, record.cid)
                 const worker = new Worker('../worker.js')
                 const {decryptByWorker} = wrap(worker)
                 const decryptedFile = await decryptByWorker(files, record.name, plaintext)
@@ -106,7 +106,7 @@ export default function Shared() {
         const MattsRSAkey = createKeyPair(userCurrent.privateKey);
         const {plaintext, status} = rsaDecrypt(record.sharedPassword, MattsRSAkey)
         if (status === "success") {
-            const files = await retrieveFiles(record.cid)
+            const files = await retrieveFiles(userCurrent.web3token, record.cid)
             const worker = new Worker('../worker.js')
             const {decryptByWorker} = wrap(worker)
             const decryptedFile = await decryptByWorker(files, record.name, plaintext)

@@ -140,7 +140,7 @@ export default function Shared() {
             console.log(`Uploading... ${pct.toFixed(2) * 100}% complete`)
         }
 
-        const cid = await storeFiles(files, onRootCidReady, onStoredChunk)
+        const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
         
         await window.contract.create_shared_folder_file({
             _folder: current.id, 
@@ -252,7 +252,7 @@ export default function Shared() {
                                         const MattsRSAkey = createKeyPair(userCurrent.privateKey);
                                         const {plaintext, status} = rsaDecrypt(root.folder_password, MattsRSAkey)
                                         if (status === "success") {
-                                            const files = await retrieveFiles(record.cid)
+                                            const files = await retrieveFiles(userCurrent.web3token, record.cid)
                                             const worker = new Worker('../worker.js')
                                             const {decryptByWorker} = wrap(worker)
                                             const decryptedFile = await decryptByWorker(files, record.name, plaintext)

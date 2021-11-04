@@ -1,19 +1,17 @@
 import { Web3Storage } from 'web3.storage/dist/bundle.esm.min.js'
 
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweGRhMjM1MDYwZUVkNWZBOERFMjlFMjAwN2QwNDkzMEExNGE1ZEZhNjgiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2MzMwNzcxOTU5NzYsIm5hbWUiOiJtYW5obnZfdGVzdCJ9.upuMLynlXF32CxbGpe2MG0DscV8ivvBGyxPPa3ehj50"
-
-function makeStorageClient() {
+function makeStorageClient(TOKEN) {
     return new Web3Storage({ token: TOKEN })
 }
 
-async function storeFiles(files, onRootCidReady, onStoredChunk ) {
-    const client = makeStorageClient()
+async function storeFiles(TOKEN, files, onRootCidReady, onStoredChunk ) {
+    const client = makeStorageClient(TOKEN)
     const cid = await client.put(files, { onRootCidReady, onStoredChunk })
     return cid
 }
 
-async function retrieveFiles(cid) {
-    const client = makeStorageClient()
+async function retrieveFiles(TOKEN, cid) {
+    const client = makeStorageClient(TOKEN)
     const res = await client.get(cid)
     console.log(`Got a response! [${res.status}] ${res.statusText}`)
     if (!res.ok) {
@@ -25,8 +23,8 @@ async function retrieveFiles(cid) {
     return files
 }
 
-async function retrieve(cid) {
-    const client = makeStorageClient()
+async function retrieve(TOKEN, cid) {
+    const client = makeStorageClient(TOKEN)
     const res = await client.get(cid)
     console.log(`Got a response! [${res.status}] ${res.statusText}`)
     if (!res.ok) {
@@ -36,8 +34,8 @@ async function retrieve(cid) {
     // request succeeded! do something with the response object here...
 }
 
-async function checkFileStatus(cid) {
-    const client = makeStorageClient()
+async function checkFileStatus(TOKEN, cid) {
+    const client = makeStorageClient(TOKEN)
     const status = await client.status(cid)
     if (status) {
         console.log(status)
@@ -46,7 +44,6 @@ async function checkFileStatus(cid) {
 
 async function validateToken(token) {
     const web3storage = new Web3Storage({ token })
-
     try {
         for await (const _ of web3storage.list({ maxResults: 1})) {
             break

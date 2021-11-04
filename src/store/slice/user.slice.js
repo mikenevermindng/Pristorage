@@ -12,25 +12,31 @@ export const fetchUserInfo = createAsyncThunk(
         const account = await window.walletConnection.account()
         const {accountId} = account
         const user = await window.contract.get_user({account_id: accountId})
+        console.log(user)
         if (!user) {
             return {
                 success: false,
+                status: 1
             }
         }
+        console.log(seedPhrase)
         const {public_key, encrypted_token} = user
         const MattsRSAkey = createKeyPair(seedPhrase);
         const {status, plaintext} = rsaDecrypt(encrypted_token, MattsRSAkey)
+        console.log(status)
         if (status === "success") {
             return {
                 success: true,
                 publicKey: public_key, 
                 web3token: plaintext, 
                 account: accountId,
-                privateKey: seedPhrase
+                privateKey: seedPhrase,
+                status: 0
             }
         } else {
             return {
                 success: false,
+                status: 1
             }
         }
     }
@@ -41,9 +47,10 @@ const userSlice = createSlice({
     initialState: {
         loading: false,
         current: {
+            status: 0,
             account: "",
             publicKey: "",
-            token: ""
+            web3token: ""
         }
     },
     reducers: {
@@ -57,11 +64,7 @@ const userSlice = createSlice({
         },
         [fetchUserInfo.fulfilled]: (state, {type, payload}) => {
             state.loading = false;
-            if (payload.success) {
-                state.current = payload
-            } else {
-                console.log('common folder is null')
-            }
+            state.current = payload
         },
         [fetchUserInfo.rejected]: (state, action) => {
             state.loading = false;
