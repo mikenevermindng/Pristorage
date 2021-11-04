@@ -61,7 +61,7 @@ export default function LoginPage() {
                         <form onSubmit={submitHandler}>
                             <img src="/avatar.svg" alt="" />
                             <h2 className="title">Vi Storage</h2>
-                            <h3>Bạn đã đăng nhập thành công</h3>
+                            <h3>You are logged in</h3>
                         </form>
                     </div>
                 </div>
