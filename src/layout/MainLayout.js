@@ -133,9 +133,7 @@ export default function MainLayout({children}) {
     };
     
     const handleOk = () => {
-        handleSubmit().then(() => {
-            history.go(0)
-        })
+        handleSubmit()
     };
     
     const handleCancel = () => {
