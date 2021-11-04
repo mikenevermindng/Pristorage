@@ -16,14 +16,14 @@ To use this application, you need to:
 Quick Start
 ===========
 1. ### Sign up
-    Go to [https://manhnvan.github.io/decentralize_file_store_app/](https://manhnvan.github.io/decentralize_file_store_app/) and click to the login button
+    Go to [https://pristorage.surge.sh/](https://pristorage.surge.sh/) and click to the login button
     The app will redirect to Near wallet [https://wallet.testnet.near.org/](https://wallet.testnet.near.org/) and then allow the app to access wallet (cause this app is now under development so we have just deploy on testnet).
     Go to [https://web3.storage/](https://web3.storage/) and login with your account and copy your Web3.Storage token.
     Comeback the page and paste copied token into the form, wait for the SeedPhrase file is downloaded (this file named as {your_near_wallet_account_id}_SeedPhrase.txt), you are now logged in.
     Make sure you store the SeedPhrase file carefully because it would be used to login your account and used to generate your rsa key pair.
 
 2. ### Sign in
-    Go to [https://manhnvan.github.io/decentralize_file_store_app/](https://manhnvan.github.io/decentralize_file_store_app/), if you have not logged in on this browser, you have to provide the SeedPhrase store in the SeedPhrase file downloaded when you signed up with.
+    Go to [https://pristorage.surge.sh/](https://pristorage.surge.sh/), if you have not logged in on this browser, you have to provide the SeedPhrase store in the SeedPhrase file downloaded when you signed up with.
     If the SeedPhrase is correct, you are now logged in.
 
 3. ### Create folder in "My Folders" tab
