@@ -21,11 +21,10 @@ import {
     getSharedFolderById
 } from '../store/slice/sharedFolderWithMe.slice'
 import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../utils/rsa.utils'
+    getPublicKeyByPrivateKey,
+    encryptStringTypeData,
+    decryptStringTypeData
+} from '../utils/keypair.utils'
 import {
     storeFiles, 
     retrieveFiles,
@@ -83,9 +82,8 @@ export default function Shared() {
         const sharedDoc = rootFoldersSharedToMe.find(doc => doc.id === rootId)
         if (sharedDoc) {
             const {sharedPassword} = sharedDoc
-            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-            const {plaintext, status} = rsaDecrypt(sharedPassword, MattsRSAkey)
-            if (status === "success") {
+            const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, sharedPassword)
+            if (success) {
                 const files = await retrieveFiles(userCurrent.web3token, record.cid)
                 const worker = new Worker('../worker.js')
                 const {decryptByWorker} = wrap(worker)
@@ -103,9 +101,8 @@ export default function Shared() {
     }
 
     const downloadSharedFile = async (record) => {
-        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-        const {plaintext, status} = rsaDecrypt(record.sharedPassword, MattsRSAkey)
-        if (status === "success") {
+        const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, record.sharedPassword)
+        if (success) {
             const files = await retrieveFiles(userCurrent.web3token, record.cid)
             const worker = new Worker('../worker.js')
             const {decryptByWorker} = wrap(worker)

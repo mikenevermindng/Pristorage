@@ -20,10 +20,8 @@ import {
 } from "react-router-dom";
 import {
     createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../utils/rsa.utils'
+    encryptStringTypeData
+} from '../utils/keypair.utils'
 import {entropyToMnemonic} from 'bip39'
 import crypto from 'crypto'
 import {saveFile} from '../utils/file.utils'
@@ -81,21 +79,19 @@ export default function MainLayout({children}) {
             token: '',
         },
         validationSchema: signupValidationSchema,
-        onSubmit: async () => {
+        onSubmit: async (values) => {
             const {accountId} = await window.walletConnection.account()
             setLoading(true);
-            const randomBytes = crypto.randomBytes(16)
-            const mnemonic = entropyToMnemonic(randomBytes.toString('hex'))
-            const blob = new Blob([mnemonic], { type: "text/plain;charset=utf-8" });
-            saveFile(blob, `${accountId}_SeedPhrase.txt`)
-            const MattsRSAkey = createKeyPair(mnemonic);
-            const MattsPublicKeyString = createPubKeyString(MattsRSAkey)
-            const encryptedToken = rsaEncrypt(values.token, MattsPublicKeyString)
-            const {cipher, status} = encryptedToken
-            if (status === "success") {
-                window.localStorage.setItem(`${accountId}_private_key`, mnemonic)
+            const {privateKey, publicKey} = createKeyPair();
+            console.log(privateKey, publicKey)
+            const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
+            saveFile(blob, `${accountId}_private_key.txt`)
+            const {success, cipher} = await encryptStringTypeData(publicKey, values.token)
+            console.log( {success, cipher} )
+            if (success) {
+                window.localStorage.setItem(`${accountId}_private_key`, privateKey)
                 window.localStorage.setItem(`${accountId}_web3_storage_token`, values.token)
-                await window.contract.sign_up({public_key: MattsPublicKeyString, encrypted_token: cipher})
+                await window.contract.sign_up({public_key: publicKey, encrypted_token: cipher})
                 setIsModalVisible(false)
                 history.go(0)
             } else {

@@ -28,17 +28,16 @@ import {wrap} from 'comlink'
 import {useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
+    getPublicKeyByPrivateKey,
+    encryptStringTypeData,
+    decryptStringTypeData
+} from '../utils/keypair.utils'
+import {
     storeFiles, 
     retrieveFiles,
     checkFileStatus,
     validateToken
 } from '../utils/web3.storage'
-import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../utils/rsa.utils'
 import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import {useHistory} from 'react-router-dom'
@@ -66,10 +65,8 @@ export default function Shared() {
         validationSchema: folderValidationSchema,
         onSubmit: async (values) => {
             const folder_password = uuidv4()
-            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-            const MattsPublicKeyString = createPubKeyString(MattsRSAkey)
-            const {status, cipher} = rsaEncrypt(folder_password, MattsPublicKeyString)
-            if (status === "success") {
+            const {success, cipher} = await encryptStringTypeData(userCurrent.publicKey, folder_password)
+            if (success) {
                 const id = uuidv4()
                 const {accountId} = await window.walletConnection.account()
                 const folder = {
@@ -156,9 +153,8 @@ export default function Shared() {
         const {root} = current
         if (root) {
             const {folder_password: folderPassword} = root
-            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-            const {status, plaintext: folderDecryptedPassword} = rsaDecrypt(folderPassword, MattsRSAkey)
-            if (status === "success") {
+            const {success, plaintext: folderDecryptedPassword} = await decryptStringTypeData(userCurrent.privateKey, folderPassword)
+            if (success) {
                 const worker = new Worker('../worker.js')
                 const {encryptByWorker} = wrap(worker)
                 const encryptedFiles = await encryptByWorker(file, folderDecryptedPassword)
@@ -249,9 +245,8 @@ export default function Shared() {
                                 <Button
                                     onClick={async () => {
                                         const {root} = current
-                                        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                        const {plaintext, status} = rsaDecrypt(root.folder_password, MattsRSAkey)
-                                        if (status === "success") {
+                                        const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, root.folder_password)
+                                        if (success) {
                                             const files = await retrieveFiles(userCurrent.web3token, record.cid)
                                             const worker = new Worker('../worker.js')
                                             const {decryptByWorker} = wrap(worker)

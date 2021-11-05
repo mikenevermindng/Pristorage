@@ -1,14 +1,11 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../../utils/rsa.utils'
+    decryptStringTypeData
+} from '../../utils/keypair.utils'
 
 export const fetchUserInfo = createAsyncThunk(
     'user/fetchUserInfo',
-    async (seedPhrase, thunkApi) => {
+    async (privateKey, thunkApi) => {
         const account = await window.walletConnection.account()
         const {accountId} = account
         const user = await window.contract.get_user({account_id: accountId})
@@ -19,18 +16,15 @@ export const fetchUserInfo = createAsyncThunk(
                 status: 1
             }
         }
-        console.log(seedPhrase)
         const {public_key, encrypted_token} = user
-        const MattsRSAkey = createKeyPair(seedPhrase);
-        const {status, plaintext} = rsaDecrypt(encrypted_token, MattsRSAkey)
-        console.log(status)
-        if (status === "success") {
+        const {success, plaintext} = await decryptStringTypeData(privateKey, encrypted_token)
+        if (success) {
             return {
                 success: true,
                 publicKey: public_key, 
                 web3token: plaintext, 
                 account: accountId,
-                privateKey: seedPhrase,
+                privateKey: privateKey,
                 status: 0
             }
         } else {

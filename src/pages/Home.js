@@ -34,11 +34,10 @@ import {
     validateToken
 } from '../utils/web3.storage'
 import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../utils/rsa.utils'
+    getPublicKeyByPrivateKey,
+    encryptStringTypeData,
+    decryptStringTypeData
+} from '../utils/keypair.utils'
 import {concatenateBlobs, saveFile} from '../utils/file.utils'
 import {getUrlParameter} from '../utils/url.utils'
 import { useHistory } from 'react-router-dom';
@@ -143,10 +142,9 @@ export default function Home() {
         const {encryptByWorker} = wrap(worker)
         const password = uuidv4()
         const encryptedFiles = await encryptByWorker(file, password)
-        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-        const MattsPublicKeyString = createPubKeyString(MattsRSAkey)
-        const {status, cipher} = rsaEncrypt(password, MattsPublicKeyString)
-        if (status === "success") {
+        const {success, cipher} = await encryptStringTypeData(userCurrent.publicKey, password)
+        console.log({success, cipher})
+        if (success) {
             await storeToWeb3Storage(encryptedFiles, file.name, file.type, cipher)
             setIsModalUploadVisible(false)
             history.go(0)
@@ -231,9 +229,8 @@ export default function Home() {
                             <Tooltip title="Download">
                                 <Button
                                     onClick={async () => {
-                                        const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-                                        const {plaintext, status} = rsaDecrypt(record.encrypted_password, MattsRSAkey)
-                                        if (status === "success") {
+                                        const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, record.encrypted_password)
+                                        if (success) {
                                             const files = await retrieveFiles(userCurrent.web3token, record.cid)
                                             const worker = new Worker('../worker.js')
                                             const {decryptByWorker} = wrap(worker)

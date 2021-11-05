@@ -9,11 +9,10 @@ import {
     ShareAltOutlined,
 } from '@ant-design/icons';
 import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../../utils/rsa.utils'
+    getPublicKeyByPrivateKey,
+    encryptStringTypeData,
+    decryptStringTypeData
+} from '../../utils/keypair.utils'
 
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
@@ -40,15 +39,14 @@ const ShareFileButton = (props) => {
                 message.error(`User "${values.account}" not found`)
                 return
             }
-            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-            const {plaintext, status: decryptStatus} = rsaDecrypt(props.encrypted_password, MattsRSAkey)
-            if (decryptStatus !== "success") {
+            const {plaintext, success: decryptStatus} = await decryptStringTypeData(userCurrent.privateKey, props.encrypted_password)
+            if (!decryptStatus) {
                 message.error(`Wrong user password`)
                 return
             }
             const {public_key} = user
-            const {cipher, status} = rsaEncrypt(plaintext, public_key)
-            if (status !== "success") {
+            const {cipher, success} = await encryptStringTypeData(public_key, plaintext)
+            if (!success) {
                 message.error(`Fail to encrypt password`)
                 return
             }

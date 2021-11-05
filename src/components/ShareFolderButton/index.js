@@ -9,12 +9,10 @@ import {
     ShareAltOutlined,
 } from '@ant-design/icons';
 import {
-    createKeyPair,
-    createPubKeyString,
-    rsaEncrypt,
-    rsaDecrypt
-} from '../../utils/rsa.utils'
-
+    getPublicKeyByPrivateKey,
+    encryptStringTypeData,
+    decryptStringTypeData
+} from '../../utils/keypair.utils'
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import { useDispatch, useSelector } from 'react-redux';
@@ -41,15 +39,15 @@ const ShareFolderButton = (props) => {
                 message.error(`User "${values.account}" not found`)
                 return
             }
-            const MattsRSAkey = createKeyPair(userCurrent.privateKey);
-            const {plaintext, status: decryptStatus} = rsaDecrypt(props.folder_password, MattsRSAkey)
-            if (decryptStatus !== "success") {
+            const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, props.folder_password)
+            console.log({plaintext, success})
+            if (!success) {
                 message.error(`Wrong user password`)
                 return
             }
             const {public_key} = user
-            const {cipher, status} = rsaEncrypt(plaintext, public_key)
-            if (status !== "success") {
+            const {cipher, success: isEncryptSuccess} = await encryptStringTypeData(public_key, plaintext)
+            if (!isEncryptSuccess) {
                 message.error(`fail to encrypt password`)
                 return
             }

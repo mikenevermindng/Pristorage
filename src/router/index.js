@@ -1,7 +1,6 @@
 import LoginPage from "../pages/Login"
 import Home from '../pages/Home'
 import Shared from '../pages/Shared'
-import FileSharedWithMe from '../pages/FileSharedWithMe'
 import FolderSharedWithMe from '../pages/SharedWithMe'
 
 const isAuthenticated = () => {

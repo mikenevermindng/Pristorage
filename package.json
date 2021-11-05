@@ -45,6 +45,7 @@
     "crypto": "^1.0.1",
     "crypto-js": "^4.1.1",
     "electron-is-dev": "^2.0.0",
+    "eth-crypto": "^2.1.0",
     "formik": "^2.2.9",
     "ipfs-car": "^0.5.8",
     "lodash": "^4.17.21",
