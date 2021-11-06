@@ -46,7 +46,7 @@ const signupValidationSchema = Yup.object().shape({
 
 const loginValidationSchema = Yup.object().shape({
     seedPhrase: Yup.string().test('Validate password', 'Invalid password', value => {
-        return value.split(" ").length === 12
+        return value.length > 12
         
     }).required('Invalid Web3 storage token')
 });
