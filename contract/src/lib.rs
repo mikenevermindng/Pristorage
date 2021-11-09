@@ -761,6 +761,84 @@ impl Contract {
         }
     }
 
+    pub fn get_files_in_folder(&self, folders: Vec<String>, files: &mut Vec<String>) {
+        for folder_id in folders.iter() {
+            match self.folders.get(&folder_id) {
+                Some(folder) => {
+                    files.extend(folder.files);
+                    self.get_files_in_folder(folder.children, files);
+                },
+                None => {
+    
+                },
+            }
+        }
+    }
+
+    pub fn get_all_file_in_folder(&self, folder_id: String) -> Vec<File> {
+        let mut files: Vec<File> = Vec::new();
+        let mut file_ids: Vec<String> = Vec::new();
+        match self.folders.get(&folder_id) {
+            Some(folder) => {
+                let folder_vec = vec![folder_id];
+                self.get_files_in_folder(folder_vec, &mut file_ids);
+            },
+            None => {
+
+            },
+        }
+        for file_id in file_ids.iter() {
+            match self.files.get(&file_id) {
+                Some(file) => {
+                    files.push(file);
+                },
+                None => {
+    
+                },
+            }
+        }
+        files
+    }
+
+    pub fn get_files_in_shared_folder(&self, folders: Vec<String>, files: &mut Vec<String>) {
+        for folder_id in folders.iter() {
+            match self.shared_folders.get(&folder_id) {
+                Some(folder) => {
+                    files.extend(folder.files);
+                    self.get_files_in_shared_folder(folder.children, files);
+                },
+                None => {
+    
+                },
+            }
+        }
+    }
+
+    pub fn get_all_file_in_shared_folder(&self, folder_id: String) -> Vec<File> {
+        let mut files: Vec<File> = Vec::new();
+        let mut file_ids: Vec<String> = Vec::new();
+        match self.shared_folders.get(&folder_id) {
+            Some(folder) => {
+                let folder_vec = vec![folder_id];
+                self.get_files_in_shared_folder(folder_vec, &mut file_ids);
+            },
+            None => {
+
+            },
+        }
+        for file_id in file_ids.iter() {
+            match self.files.get(&file_id) {
+                Some(file) => {
+                    files.push(file);
+                },
+                None => {
+    
+                },
+            }
+        }
+        files
+    }
+
     pub fn get_folder_info(&self, folder_id: String) -> Option<Folder> {
         match self.folders.get(&folder_id) {
             Some(folder) => Some(folder),

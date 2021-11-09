@@ -22,12 +22,11 @@ import {
     createKeyPair,
     encryptStringTypeData
 } from '../utils/keypair.utils'
-import {entropyToMnemonic} from 'bip39'
-import crypto from 'crypto'
 import {saveFile} from '../utils/file.utils'
 import {fetchUserInfo} from '../store/slice/user.slice'
 import { unwrapResult } from '@reduxjs/toolkit'
 import { useSelector, useDispatch } from 'react-redux';
+import _ from 'lodash'
 
 
 const { TextArea } = Input;
