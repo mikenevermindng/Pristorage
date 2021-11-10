@@ -775,8 +775,8 @@ impl Contract {
         }
     }
 
-    pub fn get_all_file_in_folder(&self, folder_id: String) -> Vec<File> {
-        let mut files: Vec<File> = Vec::new();
+    pub fn get_all_file_in_folder(&self, folder_id: String) -> Vec<(File, String)> {
+        let mut files: Vec<(File, String)> = Vec::new();
         let mut file_ids: Vec<String> = Vec::new();
         match self.folders.get(&folder_id) {
             Some(folder) => {
@@ -790,7 +790,7 @@ impl Contract {
         for file_id in file_ids.iter() {
             match self.files.get(&file_id) {
                 Some(file) => {
-                    files.push(file);
+                    files.push((file, file_id.to_string()));
                 },
                 None => {
     
@@ -814,8 +814,8 @@ impl Contract {
         }
     }
 
-    pub fn get_all_file_in_shared_folder(&self, folder_id: String) -> Vec<File> {
-        let mut files: Vec<File> = Vec::new();
+    pub fn get_all_file_in_shared_folder(&self, folder_id: String) -> Vec<(File, String)> {
+        let mut files: Vec<(File, String)> = Vec::new();
         let mut file_ids: Vec<String> = Vec::new();
         match self.shared_folders.get(&folder_id) {
             Some(folder) => {
@@ -829,7 +829,7 @@ impl Contract {
         for file_id in file_ids.iter() {
             match self.files.get(&file_id) {
                 Some(file) => {
-                    files.push(file);
+                    files.push((file, file_id.to_string()));
                 },
                 None => {
     
