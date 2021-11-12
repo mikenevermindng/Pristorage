@@ -69,12 +69,14 @@ export default function Shared() {
             if (success) {
                 const id = uuidv4()
                 const {accountId} = await window.walletConnection.account()
+                const currentTimeStamp = new Date().getTime()
                 const folder = {
                     _id: id, 
                     _name: values.name, 
                     _parent: current.id,
                     _password: cipher,
-                    _account_id: accountId
+                    _account_id: accountId,
+                    _created_at: currentTimeStamp,
                 }
                 await window.contract.create_shared_folder(folder)
                 history.go(0)
@@ -138,13 +140,14 @@ export default function Shared() {
         }
 
         const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
-        
+        const currentTimeStamp = new Date().getTime()
         await window.contract.create_shared_folder_file({
             _folder: current.id, 
             _file_id: uuidv4(),
             _cid: cid, 
             _name: filename, 
-            _file_type: fileType 
+            _file_type: fileType,
+            _last_update: currentTimeStamp
         })
         history.go(0)
     }

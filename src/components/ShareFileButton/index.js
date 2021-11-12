@@ -3,6 +3,7 @@ import {
     Button, 
     Modal, 
     Input,
+    Select,
     message
 } from 'antd'
 import {
@@ -18,9 +19,12 @@ import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import { useDispatch, useSelector } from 'react-redux';
 
-const accountValidationSchema = Yup.object().shape({
+const validationSchema = Yup.object().shape({
     account: Yup.string().required('Invalid account id'),
+    permissions: Yup.number().required('Invalid permission'),
 });
+
+const {Option} = Select
 
 const ShareFileButton = (props) => {
 
@@ -31,8 +35,9 @@ const ShareFileButton = (props) => {
     const accountFormik = useFormik({
         initialValues: {
             account: '',
+            permissions: ''
         },
-        validationSchema: accountValidationSchema,
+        validationSchema: validationSchema,
         onSubmit: async (values) => {
             const user = await window.contract.get_user({account_id: values.account})
             if (!user) {
@@ -55,20 +60,20 @@ const ShareFileButton = (props) => {
                 _doc_id: `${userCurrent.account}_${values.account}_${props.id}`, 
                 _share_with: values.account, 
                 _parent_folder: props.folder, 
-                _password: cipher
+                _password: cipher,
+                _permissions: values.permissions
             }
-            console.log(params)
             const data = await window.contract.share_file(params)
             history.go(0)
         }
     })
 
     const {
-        values: accountValues, 
-        errors: accountErrors, 
-        handleChange: accountHandleChange, 
-        handleSubmit: accountHandleSubmit, 
-        setFieldValue: accountSetFieldValue
+        values: values, 
+        errors: errors, 
+        handleChange: handleChange, 
+        handleSubmit: handleSubmit, 
+        setFieldValue: setFieldValue
     } = accountFormik
 
     const [isModalShareVisible, setIsModalShareVisible] = useState(false);
@@ -89,14 +94,23 @@ const ShareFileButton = (props) => {
         <Modal 
             title="Share file" 
             visible={isModalShareVisible} 
-            onOk={accountHandleSubmit} 
+            onOk={handleSubmit} 
             onCancel={handleCancelShare}
         >
-            <label className="form-label">Share with</label>
             <div className="input-group mb-3">
-                <Input placeholder="Account id" onChange={accountHandleChange('account')} />
+                <label className="form-label">Share with</label>
+                <Input placeholder="Account id" onChange={handleChange('account')} />
             </div>
-            {accountErrors.account && <span className="error-text">{accountErrors.account}</span>}
+            {errors.account && <span className="error-text">{errors.account}</span>}
+            
+            <div className="input-group mb-3">
+                <label className="form-label">Permission</label>
+                <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('permissions', parseInt(val))}>
+                    <Option value="1">Chỉ đọc</Option>
+                    <Option value="2">Thay đổi</Option>
+                </Select>
+            </div>
+            {errors.permissions && <span className="error-text">{errors.permissions}</span>}
         </Modal>
         </>
     )

@@ -65,11 +65,13 @@ export default function Home() {
         },
         validationSchema: folderValidationSchema,
         onSubmit: async (values) => {
+            const currentTimeStamp = new Date().getTime()
             const id = uuidv4()
             const folder = {
                 _id: id, 
                 _name: values.name, 
-                _parent: commonFolderCurrent.id
+                _parent: commonFolderCurrent.id,
+                _created_at: currentTimeStamp
             }
             const data = await window.contract.create_folder(folder)
             history.go(0)
@@ -125,14 +127,15 @@ export default function Home() {
         }
 
         const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
-        
+        const current = new Date().getTime()
         await window.contract.create_file({
             _folder: commonFolderCurrent.id, 
             _file_id: uuidv4(),
             _cid: cid, 
             _name: filename, 
             _encrypted_password: encryptedPassword, 
-            _file_type: fileType 
+            _file_type: fileType ,
+            _last_update: current
         })
         history.go(0)
     }

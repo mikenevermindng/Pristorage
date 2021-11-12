@@ -9,7 +9,6 @@ export const fetchUserInfo = createAsyncThunk(
         const account = await window.walletConnection.account()
         const {accountId} = account
         const user = await window.contract.get_user({account_id: accountId})
-        console.log(user)
         if (!user) {
             return {
                 success: false,

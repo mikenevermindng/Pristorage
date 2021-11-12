@@ -3,6 +3,7 @@ import {
     Button, 
     Modal, 
     Input,
+    Select,
     message
 } from 'antd'
 import {
@@ -19,7 +20,10 @@ import { useDispatch, useSelector } from 'react-redux';
 
 const accountValidationSchema = Yup.object().shape({
     account: Yup.string().required('Invalid account id'),
+    permissions: Yup.number().required('Invalid permission'),
 });
+
+const {Option} = Select
 
 const ShareFolderButton = (props) => {
 
@@ -30,6 +34,7 @@ const ShareFolderButton = (props) => {
     const accountFormik = useFormik({
         initialValues: {
             account: '',
+            permissions: ''
         },
         validationSchema: accountValidationSchema,
         onSubmit: async (values) => {
@@ -55,7 +60,8 @@ const ShareFolderButton = (props) => {
                 _folder_id: props.id, 
                 _doc_id: `${userCurrent.account}_${values.account}_${props.id}`, 
                 _share_with: values.account, 
-                _password: cipher
+                _password: cipher,
+                _permissions: values.permissions
             }
             await window.contract.share_folder(params)
             history.go(0)
@@ -63,11 +69,11 @@ const ShareFolderButton = (props) => {
     })
 
     const {
-        values: accountValues, 
-        errors: accountErrors, 
-        handleChange: accountHandleChange, 
-        handleSubmit: accountHandleSubmit, 
-        setFieldValue: accountSetFieldValue
+        values: values, 
+        errors: errors, 
+        handleChange: handleChange, 
+        handleSubmit: handleSubmit, 
+        setFieldValue: setFieldValue
     } = accountFormik
 
     const [isModalShareVisible, setIsModalShareVisible] = useState(false);
@@ -88,14 +94,23 @@ const ShareFolderButton = (props) => {
         <Modal 
             title="Share folder" 
             visible={isModalShareVisible} 
-            onOk={accountHandleSubmit} 
+            onOk={handleSubmit} 
             onCancel={handleCancelShare}
         >
             <label className="form-label">Share with</label>
             <div className="input-group mb-3">
-                <Input placeholder="Account id" onChange={accountHandleChange('account')} />
+                <Input placeholder="Account id" onChange={handleChange('account')} />
             </div>
-            {accountErrors.account && <span className="error-text">{accountErrors.account}</span>}
+            {errors.account && <span className="error-text">{errors.account}</span>}
+
+            <div className="input-group mb-3">
+                <label className="form-label">Permission</label>
+                <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('permissions', parseInt(val))}>
+                    <Option value="1">Chỉ đọc</Option>
+                    <Option value="2">Thay đổi</Option>
+                </Select>
+            </div>
+            {errors.permissions && <span className="error-text">{errors.permissions}</span>}
         </Modal>
         </>
     )

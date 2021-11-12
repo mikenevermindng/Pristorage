@@ -35,7 +35,6 @@ const signupValidationSchema = Yup.object().shape({
     token: Yup.string().test('Validate password', 'Invalid Token', value => {
         return new Promise((resolve, reject) => {
             validateToken(value).then(result => {
-                console.log(result);
                 resolve(result)
             })
         });
@@ -63,7 +62,6 @@ export default function MainLayout({children}) {
 
     useEffect(() => {
         const currentURL = window.location.href
-        console.log(currentURL)
         if (currentURL.includes('login')) {
             setHideLayout(true)
         } else {
@@ -82,15 +80,14 @@ export default function MainLayout({children}) {
             const {accountId} = await window.walletConnection.account()
             setLoading(true);
             const {privateKey, publicKey} = createKeyPair();
-            console.log(privateKey, publicKey)
             const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
             saveFile(blob, `${accountId}_private_key.txt`)
             const {success, cipher} = await encryptStringTypeData(publicKey, values.token)
-            console.log( {success, cipher} )
             if (success) {
                 window.localStorage.setItem(`${accountId}_private_key`, privateKey)
                 window.localStorage.setItem(`${accountId}_web3_storage_token`, values.token)
-                await window.contract.sign_up({public_key: publicKey, encrypted_token: cipher})
+                const current = new Date().getTime()
+                await window.contract.sign_up({_public_key: publicKey, _encrypted_token: cipher, _created_at: current})
                 setIsModalVisible(false)
                 history.go(0)
             } else {

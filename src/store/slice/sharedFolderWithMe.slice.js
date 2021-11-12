@@ -11,6 +11,8 @@ export const getSharedFoldersWithMeInfo = createAsyncThunk(
                 owner: folder[0],
                 id: folder[1],
                 sharedPassword: folder[2],
+                permissions: folder[4],
+                shareDocId: folder[5]
             }
         })
         return result
