@@ -197,6 +197,11 @@ export default function Shared() {
             ...folders, 
             ...files]
         )
+        const fetData = async () => {
+            const rootId = await window.contract.get_root_id_by_shared_folder_id({_shared_folder_id: current.id})
+            console.log(rootId)
+        }
+        fetData()
     }, [current])
 
     const props = {

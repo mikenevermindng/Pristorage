@@ -204,9 +204,19 @@ impl Contract {
                     let share_doc_id = format!("{}_{}_{}", owner, _account_id, root_shared_folder);
                     match self.shared_folder_docs.get(&share_doc_id) {
                         Some(share_doc) => {
+                            assert_eq!(
+                                share_doc.permissions,
+                                2,
+                                "You do not have permission to change this folder {}",
+                                share_doc_id
+                            );
                         },
                         None => {
-                            assert!(false, "You do not have permission to change this folder");
+                            assert!(
+                                false, 
+                                "You do not have permission to change this folder {}",
+                                share_doc_id
+                            );
                         }
                     }
                 }
@@ -288,34 +298,50 @@ impl Contract {
         let _account_id = env::signer_account_id();
         match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
             Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.shared_folders.get(&_folder) {
-                    Some(mut folder) => {
-                        let file = File {
-                            cid: _cid,
-                            name: _name,
-                            encrypted_password: None,
-                            file_type: _file_type,
-                            last_update: _last_update,
-                            updated_by: _account_id
-                        };
-                        folder.files.push(String::from(&_file_id[..]));
-                        self.shared_folders.insert(&_folder, &folder);
-                        self.files.insert(&_file_id, &file);
-                    },
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _folder).as_bytes());
+                if _account_id.ne(&owner[..]) {
+                    let root_shared_folder = self.get_root_id_by_shared_folder_id(String::from(&_folder[..]));
+                    let share_doc_id = format!("{}_{}_{}", owner, _account_id, root_shared_folder);
+                    match self.shared_folder_docs.get(&share_doc_id) {
+                        Some(share_doc) => {
+                            assert_eq!(
+                                share_doc.permissions,
+                                2,
+                                "You do not have permission to change this folder {}",
+                                share_doc_id
+                            );
+                        },
+                        None => {
+                            assert!(
+                                false, 
+                                "You do not have permission to change this folder {}",
+                                share_doc_id
+                            );
+                        }
                     }
-                };
+                }
             },
             None => {
-                env::log(format!("Owner not match: '{}'", _folder).as_bytes());
+                assert!(false, "You do not have permission to change this folder");
             }
         }
+        match self.shared_folders.get(&_folder) {
+            Some(mut folder) => {
+                let file = File {
+                    cid: _cid,
+                    name: _name,
+                    encrypted_password: None,
+                    file_type: _file_type,
+                    last_update: _last_update,
+                    updated_by: _account_id
+                };
+                folder.files.push(String::from(&_file_id[..]));
+                self.shared_folders.insert(&_folder, &folder);
+                self.files.insert(&_file_id, &file);
+            },
+            None => {
+                env::log(format!("Folder not found: '{}'", _folder).as_bytes());
+            }
+        };
     }
 
     pub fn share_file(
@@ -801,25 +827,35 @@ impl Contract {
     }
 
     pub fn get_owner_by_shared_folder_id(&self, _shared_folder_id: String) -> Option<String> {
-        match self.shared_folders.get(&_shared_folder_id) {
-            Some(folder_by_id) => {
-                let mut current_id = String::from(&_shared_folder_id[..]);
-                let mut parent_id = String::from(&folder_by_id.parent[..]);
-                while current_id.ne(&parent_id[..]) {
-                    match self.shared_folders.get(&parent_id) {
-                        Some(folder) => {
-                            parent_id = folder.parent;
-                            current_id = String::from(&parent_id[..]);
-                        },
-                        None => {},
-                    };
-                };
-                Some(current_id)
-            }, 
-            None => {
-                None
-            }
-        }
+        // match self.shared_folders.get(&_shared_folder_id) {
+        //     Some(folder_by_id) => {
+        //         let mut current_id = String::from(&_shared_folder_id[..]);
+        //         let mut parent_id = String::from(&folder_by_id.parent[..]);
+        //         while current_id.ne(&parent_id[..]) {
+        //             match self.shared_folders.get(&parent_id) {
+        //                 Some(folder) => {
+        //                     parent_id = folder.parent;
+        //                     current_id = String::from(&parent_id[..]);
+        //                 },
+        //                 None => {},
+        //             };
+        //         };
+        //         Some(current_id)
+        //     }, 
+        //     None => {
+        //         None
+        //     }
+        // }
+        let mut current_id = String::from(&_shared_folder_id[..]);
+        while self.users.get(&current_id).is_none() {
+            match self.shared_folders.get(&current_id) {
+                Some(folder) => {
+                    current_id = folder.parent;
+                },
+                None => {},
+            };
+        };
+        Some(current_id)
     }
 
     pub fn get_root_id_by_shared_folder_id(&self, _shared_folder_id: String) -> String {
@@ -829,13 +865,14 @@ impl Contract {
                 let mut current_id = String::from(&_shared_folder_id[..]);
                 let mut parent_id = String::from(&folder_by_id.parent[..]);
                 while current_id.ne(&parent_id[..]) {
+                    env::log(format!("current_id : '{}', parent_id: {}", current_id, parent_id).as_bytes());
                     match self.shared_folders.get(&parent_id) {
                         Some(folder) => {
-                            if parent_id.eq(&folder.parent[..]) {
-                                result = String::from(&current_id[..]);;
+                            if folder.parent.eq(&parent_id) {
+                                result = current_id;
                             }
-                            parent_id = folder.parent;
                             current_id = String::from(&parent_id[..]);
+                            parent_id = folder.parent;
                         },
                         None => {},
                     };

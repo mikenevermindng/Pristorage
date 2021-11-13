@@ -136,7 +136,7 @@ export default function SharedWithMe() {
         const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
         const currentTimeStamp = new Date().getTime()
         await window.contract.create_shared_folder_file({
-            _folder: current.id, 
+            _folder: foldersSharedWithMe.id, 
             _file_id: uuidv4(),
             _cid: cid, 
             _name: filename, 
@@ -147,9 +147,11 @@ export default function SharedWithMe() {
     }
 
     const fileSubmit = async (file) => {
-        const {root} = current
-        if (root) {
-            const {folder_password: folderPassword} = root
+        console.log(foldersSharedWithMe)
+        const {rootId} = foldersSharedWithMe
+        const rootFolder = rootFoldersSharedToMe.find(folder => folder.id === rootId)
+        if (rootFolder) {
+            const {sharedPassword: folderPassword} = rootFolder
             const {success, plaintext: folderDecryptedPassword} = await decryptStringTypeData(userCurrent.privateKey, folderPassword)
             if (success) {
                 const worker = new Worker('../worker.js')
@@ -161,7 +163,6 @@ export default function SharedWithMe() {
             } else {
                 message.error('Fail to encrypt file ' + file.name)
             }
-            
         }
     }
     
