@@ -251,6 +251,42 @@ impl Contract {
         };
     }
 
+    pub fn update_file(&mut self, _id: String, _cid: String, _owner: String, _last_update: u64) {
+        let _account_id = env::signer_account_id();
+        let share_doc_id = format!("{}_{}_{}", _owner, _account_id, _id);
+        match self.shared_file_docs.get(&share_doc_id) {
+            Some(share_doc) => {
+                assert_eq!(
+                    share_doc.permissions,
+                    2,
+                    "You do not have permission to change this folder {}",
+                    share_doc_id
+                );
+            },
+            None => {
+                assert!(
+                    false, 
+                    "You do not have permission to change this folder {}",
+                    share_doc_id
+                );
+            }
+        }
+        match self.files.get(&_id) {
+            Some(mut file) => {
+                file.cid = _cid;
+                file.last_update = _last_update;
+                self.files.insert(&_id, &file);
+            },
+            None => {
+                assert!(
+                    false, 
+                    "File not existed {}",
+                    _id
+                );
+            }
+        }
+    }
+
     pub fn create_file(
         &mut self, 
         _folder: String, 
@@ -284,7 +320,10 @@ impl Contract {
                     last_update: _last_update,
                     updated_by: _account_id
                 };
-                folder.files.push(String::from(&_file_id[..]));
+                let index = folder.files.iter().position(|x| *x == _file_id);
+                if index.is_none() {
+                    folder.files.push(String::from(&_file_id[..]));
+                }
                 self.folders.insert(&_folder, &folder);
                 self.files.insert(&_file_id, &file);
             },
@@ -334,7 +373,10 @@ impl Contract {
                     last_update: _last_update,
                     updated_by: _account_id
                 };
-                folder.files.push(String::from(&_file_id[..]));
+                let index = folder.files.iter().position(|x| *x == _file_id);
+                if index.is_none() {
+                    folder.files.push(String::from(&_file_id[..]));
+                }
                 self.shared_folders.insert(&_folder, &folder);
                 self.files.insert(&_file_id, &file);
             },

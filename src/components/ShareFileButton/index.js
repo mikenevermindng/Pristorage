@@ -106,8 +106,8 @@ const ShareFileButton = (props) => {
             <div className="input-group mb-3">
                 <label className="form-label">Permission</label>
                 <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('permissions', parseInt(val))}>
-                    <Option value="1">Chỉ đọc</Option>
-                    <Option value="2">Thay đổi</Option>
+                    <Option value="1">Read only</Option>
+                    <Option value="2">Edit</Option>
                 </Select>
             </div>
             {errors.permissions && <span className="error-text">{errors.permissions}</span>}

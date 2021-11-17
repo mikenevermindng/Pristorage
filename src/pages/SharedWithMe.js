@@ -418,15 +418,13 @@ export default function SharedWithMe() {
                         </Modal>
                     </div>
                 </div>}
-                <div className="content">
-                    <div className="list-items mt-3">
-                        <div className="mt-3">
-                            <Table 
-                                columns={columns} 
-                                dataSource={data} 
-                                rowKey={(record) => record.id}  
-                            />
-                        </div>
+                <div className="list-items mt-3">
+                    <div className="mt-3">
+                        <Table 
+                            columns={columns} 
+                            dataSource={data} 
+                            rowKey={(record) => record.id}  
+                        />
                     </div>
                 </div>
             </div>

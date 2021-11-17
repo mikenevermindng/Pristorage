@@ -275,7 +275,7 @@ export default function Shared() {
                                     type="File" 
                                     name={record.name} 
                                     handleDelete={async () => {
-                                        window.contract.remove_shared_file({_folder: current.id, _file: record.id})
+                                        await window.contract.remove_shared_file({_folder: current.id, _file: record.id})
                                         history.go(0)
                                     }}
                                 />
