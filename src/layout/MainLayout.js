@@ -148,21 +148,17 @@ export default function MainLayout({children}) {
 
     useEffect(() => {
         const checkBeforeEnter = async () => {
-            const {accountId} = await window.walletConnection.account()
             const private_key = window.localStorage.getItem(`${accountId}_private_key`)
-            try {
-                const user = await window.contract.get_user({account_id: accountId})
-                if (!user) {
+            const response = await dispatch(fetchUserInfo(private_key))
+            const result = unwrapResult(response)
+            const {success, status} = result
+            if (!success) {
+                if (status === 1) {
                     showModal()
                 } else {
-                    if (!private_key) {
-                        setIsModalLoginVisible(true)
-                    } else {
-                        const response = await dispatch(fetchUserInfo(private_key))
-                    }
+                    setIsModalLoginVisible(true)
+                    return
                 }
-            } catch(error) {
-                console.log(error)
             }
         }
         checkBeforeEnter()
@@ -218,7 +214,7 @@ export default function MainLayout({children}) {
             </Layout>}
             <Modal
                 visible={isModalLoginVisible}
-                title="Your password"
+                title="Your private key"
                 onOk={loginHandleSubmit}
                 footer={[
                     <Button
@@ -234,7 +230,7 @@ export default function MainLayout({children}) {
                 <div className="input-group mb-3">
                     <label className="form-label">Password</label>
                     <TextArea 
-                        placeholder="Password" 
+                        placeholder="Private key" 
                         onChange={loginHandleChange('seedPhrase')}
                     />
                     {loginErrors.seedPhrase && <span className="error-text">{loginErrors.seedPhrase}</span>}

@@ -6,6 +6,7 @@ import {
 export const fetchUserInfo = createAsyncThunk(
     'user/fetchUserInfo',
     async (privateKey, thunkApi) => {
+        
         const account = await window.walletConnection.account()
         const {accountId} = account
         const user = await window.contract.get_user({account_id: accountId})
@@ -13,6 +14,12 @@ export const fetchUserInfo = createAsyncThunk(
             return {
                 success: false,
                 status: 1
+            }
+        }
+        if (!privateKey) {
+            return {
+                success: false,
+                status: 2
             }
         }
         const {public_key, encrypted_token} = user
@@ -29,7 +36,7 @@ export const fetchUserInfo = createAsyncThunk(
         } else {
             return {
                 success: false,
-                status: 1
+                status: 3
             }
         }
     }
