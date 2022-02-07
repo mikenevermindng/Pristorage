@@ -84,6 +84,7 @@ function saveFile(blob, filename) {
     document.body.appendChild(a);
     a.style = "display: none";
     var url = window.URL.createObjectURL(blob);
+    console.log(url);
     a.href = url;
     a.download = filename;
     a.click();

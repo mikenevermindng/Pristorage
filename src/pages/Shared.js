@@ -209,6 +209,7 @@ export default function Shared() {
         multiple: false,
         onChange(info) {
             const { status } = info.file;
+            console.log(info)
             if (status !== 'uploading') {
                 fileSubmit(info.file.originFileObj)
             }

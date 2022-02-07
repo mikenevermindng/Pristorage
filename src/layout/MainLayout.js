@@ -1,12 +1,13 @@
 import React, {useState, useEffect} from 'react'
 import './layout.css'
-import { Layout, Menu, Input, Modal, Button, message } from 'antd';
+import { Layout, Menu, Input, Modal, Button, message, Dropdown, Space } from 'antd';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
     DatabaseOutlined,
     UsergroupAddOutlined,
-    UserSwitchOutlined
+    UserSwitchOutlined,
+    CaretDownOutlined
 } from '@ant-design/icons';
 const { Header, Sider, Content } = Layout;
 import {useFormik } from 'formik';
@@ -16,17 +17,16 @@ import {
 } from '../utils/web3.storage'
 import { 
     useHistory,
-    Link
 } from "react-router-dom";
 import {
     createKeyPair,
     encryptStringTypeData
 } from '../utils/keypair.utils'
 import {saveFile} from '../utils/file.utils'
-import {fetchUserInfo} from '../store/slice/user.slice'
-import { unwrapResult } from '@reduxjs/toolkit'
 import { useSelector, useDispatch } from 'react-redux';
 import _ from 'lodash'
+import useFetchUser from '../hook/useFetchUser'
+import {logout} from '../utils/near.utils'
 
 
 const { TextArea } = Input;
@@ -59,6 +59,10 @@ export default function MainLayout({children}) {
     const [isModalLoginVisible, setIsModalLoginVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isHideLayout, setHideLayout] = useState(false);
+    const {
+        isRegistered,
+        isLoggedIn
+    } = useFetchUser()
 
     useEffect(() => {
         const currentURL = window.location.href
@@ -107,6 +111,23 @@ export default function MainLayout({children}) {
         }
     })
 
+    const logoutHandler = async () => {
+        const {accountId} = await window.walletConnection.account()
+        window.localStorage.removeItem(`${accountId}_private_key`)
+        window.localStorage.removeItem(`${accountId}_web3_storage_token`)
+        logout().then(() => {
+            history.push('/login')
+        }) 
+    }
+
+    const menu = (
+        <Menu>
+            <Menu.Item key="1" onClick={logoutHandler} danger>
+                Logout
+            </Menu.Item>
+        </Menu>
+    );
+
     const {values, errors, handleChange, handleSubmit, setFieldValue} = formik
     const {
         values: loginValues, 
@@ -128,18 +149,6 @@ export default function MainLayout({children}) {
         handleSubmit()
     };
     
-    const handleCancel = () => {
-        setIsModalVisible(false);
-    };
-
-    const showLoginModal = () => {
-        setIsModalLoginVisible(true);
-    };
-
-    const handleLoginOk = () => {
-
-    }
-
     useEffect(() => {
         if (!current.success && current.status === 1) {
             showModal()
@@ -147,22 +156,12 @@ export default function MainLayout({children}) {
     }, [current])
 
     useEffect(() => {
-        const checkBeforeEnter = async () => {
-            const private_key = window.localStorage.getItem(`${accountId}_private_key`)
-            const response = await dispatch(fetchUserInfo(private_key))
-            const result = unwrapResult(response)
-            const {success, status} = result
-            if (!success) {
-                if (status === 1) {
-                    showModal()
-                } else {
-                    setIsModalLoginVisible(true)
-                    return
-                }
-            }
+        if (!isRegistered) {
+            showModal()
+        } else if (!isLoggedIn) {
+            setIsModalLoginVisible(true)
         }
-        checkBeforeEnter()
-    }, [])
+    }, [isRegistered, isLoggedIn])
 
     const redirect = (path) => {
         history.push(path)
@@ -196,7 +195,9 @@ export default function MainLayout({children}) {
                                 })}
                             </div>
                             <div className="account">
-                                {current.account}
+                                <Dropdown overlay={menu} placement="bottomLeft">
+                                    <Button type="text">{current.account}<CaretDownOutlined /></Button>
+                                </Dropdown>
                             </div>
                         </div>
                     </Header>
