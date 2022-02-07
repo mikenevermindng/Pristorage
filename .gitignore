@@ -29,6 +29,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/dist
+/dist/src.*
+/dist/worker.*
+/dist/*.html
 /out
 /contract/target/*
