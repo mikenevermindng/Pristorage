@@ -1,0 +1,23 @@
+.file-preview-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;    
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.frame {
+    border: 0;
+    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    display:block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;    
+    justify-self: center; 
+    align-self: center; 
+}

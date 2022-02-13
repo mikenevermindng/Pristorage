@@ -18,7 +18,6 @@ async function encryptStringTypeData(publicKey, data) {
         const cipher = EthCrypto.cipher.stringify(encrypted)
         return {success: true, cipher}
     } catch(error) {
-        console.log(error)
         return {success: false, error: error.message}
     } 
 }

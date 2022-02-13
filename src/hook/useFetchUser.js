@@ -1,7 +1,6 @@
 import { set } from 'lodash';
 import React, {useEffect, useState} from 'react';
 import { useHistory } from 'react-router-dom'
-import {fetchUserInfo} from '../store/slice/user.slice'
 import {
     decryptStringTypeData
 } from '../utils/keypair.utils'

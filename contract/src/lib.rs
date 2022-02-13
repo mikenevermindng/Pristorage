@@ -1,9 +1,8 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, near_bindgen, setup_alloc};
 use near_sdk::collections::{UnorderedMap, UnorderedSet};
-use near_sdk::serde::{Serialize, Deserialize};
 use std::option::Option::{Some, None};
-use std::collections::HashMap;
+use near_sdk::serde::{Serialize, Deserialize};
 
 setup_alloc!();
 
@@ -13,9 +12,11 @@ pub struct File {
     cid: String,
     name: String,
     encrypted_password: Option<String>,
-    file_type: String,
+    file_type: String, // type of file (png, jpeg)
     last_update: u64,
-    updated_by: String
+    updated_by: String,
+    created_at: u64,
+    created_by: String
 }
 
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
@@ -42,6 +43,19 @@ pub struct SharedFolder {
 
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FolderV2 {
+    name: String,
+    files: Vec<String>,
+    parent: String,
+    children: Vec<String>,
+    folder_type: Option<u8>, // 1 for common folder, 2 for shared folder
+    folder_password: Option<String>,
+    created_by: String,
+    created_at: u64,
+}
+
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct User {
     public_key: String,
     encrypted_token: String
@@ -52,7 +66,7 @@ pub struct User {
 pub struct SharedFileDoc {
     file: String,
     share_password: String,
-    permissions: u8
+    permissions: u8,
 }
 
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
@@ -60,31 +74,36 @@ pub struct SharedFileDoc {
 pub struct SharedFolderDoc {
     folder: String,
     share_password: String,
-    permissions: u8
+    permissions: u8,
 }
 
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
-pub struct SharedFileDocDetail {
-    file: File,
+pub struct SharedDoc {
+    doc_id: String,
     share_password: String,
-}
-
-#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct SharedFolderDocDetail {
-    folder: SharedFolder,
-    share_password: String
+    permissions: u8,
+    created_at: u64,
+    doc_type: u8 // 1 for file, 2 for folder
 }
 
 #[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshSerialize, BorshDeserialize)]
 pub struct Contract {
-    folders: UnorderedMap<String, Folder>,
-    shared_folders: UnorderedMap<String, SharedFolder>,
+
+    // v2 developing
+    folders_v2:  UnorderedMap<String, FolderV2>,
     users: UnorderedMap<String, User>,
     files: UnorderedMap<String, File>,
+    shared_docs: UnorderedMap<String, SharedDoc>,
+    shared_docs_of_user: UnorderedMap<String, UnorderedSet<String>>, // mapping from user to a mapping user => doc which the user own
 
+
+
+    // v1
+    folders: UnorderedMap<String, Folder>,
+    shared_folders: UnorderedMap<String, SharedFolder>,
+    
     shared_file_docs: UnorderedMap<String, SharedFileDoc>,
     shared_folder_docs: UnorderedMap<String, SharedFolderDoc>,
 
@@ -100,8 +119,11 @@ impl Default for Contract {
         Self {
             folders: UnorderedMap::new(b"f".to_vec()),
             shared_folders: UnorderedMap::new(b"sf".to_vec()),
+            folders_v2: UnorderedMap::new(b"fv2".to_vec()),
             users: UnorderedMap::new(b"u".to_vec()),
             files: UnorderedMap::new(b"fl".to_vec()),
+            shared_docs: UnorderedMap::new(b"fd".to_vec()),
+            shared_docs_of_user: UnorderedMap::new(b"sdou".to_vec()),
 
             shared_file_docs: UnorderedMap::new(b"sfld".to_vec()),
             shared_folder_docs:UnorderedMap::new(b"sfdd".to_vec()),
@@ -142,8 +164,19 @@ impl Contract {
             created_by: String::from(&account_id[..]),
             created_at: _created_at
         };
+        let root_shared_folder_v2 = FolderV2 {
+            name: String::from("root"),
+            files: Vec::new(),
+            parent: String::from(&account_id[..]),
+            children: Vec::new(),
+            folder_password: None,
+            created_by: String::from(&account_id[..]),
+            created_at: _created_at,
+            folder_type: None,
+        };
         self.folders.insert(&String::from(&account_id[..]), &root);
         self.shared_folders.insert(&String::from(&account_id[..]), &root_shared_folder);
+        self.folders_v2.insert(&String::from(&account_id[..]), &root_shared_folder_v2);
     }
 
     pub fn get_user(&self, account_id: String) -> Option<User> {
@@ -154,55 +187,19 @@ impl Contract {
         }
     }
 
-    pub fn create_folder(&mut self, _id: String, _name: String, _parent: String, _created_at: u64) {
-        let _account_id = env::signer_account_id();
-        match self.get_owner_by_folder_id(String::from(&_parent[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.folders.get(&_parent) {
-                    Some(mut folder) => {
-                        folder.children.push(String::from(&_id[..]));
-                        self.folders.insert(&_parent, &folder);
-                        let new_folder = Folder {
-                            name: String::from(&_name[..]),
-                            files: Vec::new(),
-                            parent: String::from(&_parent[..]),
-                            children: Vec::new(),
-                            created_at: _created_at
-                        };
-                        self.folders.insert(&_id, &new_folder);
-                    },
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _parent).as_bytes());
-                    }
-                };
-            }, 
-            None => {
-                env::log(format!("Owner not found: '{}'", _parent).as_bytes());
-            }
-        }
-        
-    }
-
-    pub fn create_shared_folder(
-        &mut self, 
-        _id: String, 
-        _name: String, 
-        _parent: String, 
-        _password: String, 
-        _created_at: u64
+    pub fn verify_accessible(
+        &self, 
+        root_folder: &Option<FolderV2>, 
+        folder_id: String,
+        account_id: String,
     ) {
-        let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_parent[..])) {
-            Some(owner) => {
-                if _account_id.ne(&owner[..]) {
-                    let root_shared_folder = self.get_root_id_by_shared_folder_id(String::from(&_parent[..]));
-                    let share_doc_id = format!("{}_{}_{}", owner, _account_id, root_shared_folder);
-                    match self.shared_folder_docs.get(&share_doc_id) {
+        match root_folder {
+            Some(folder) => {
+                let owner = &folder.parent;
+                let root_folder_id = folder_id;
+                let share_doc_id = format!("{}_{}_{}", owner, account_id, root_folder_id);
+                if !owner.eq(&account_id) {
+                    match self.shared_docs.get(&share_doc_id) {
                         Some(share_doc) => {
                             assert_eq!(
                                 share_doc.permissions,
@@ -214,7 +211,7 @@ impl Contract {
                         None => {
                             assert!(
                                 false, 
-                                "You do not have permission to change this folder {}",
+                                "You do not shared with this doc {}",
                                 share_doc_id
                             );
                         }
@@ -222,28 +219,101 @@ impl Contract {
                 }
             },
             None => {
-                assert!(false, "You do not have permission to change this folder");
+                assert!(false, "You do not have permission to change this folder"); 
             }
         }
+    }
+
+    pub fn validate_folder_id(&self, _folder_id: String) {
+        match self.users.get(&String::from(&_folder_id[..])) {
+            Some(_) => {
+                assert!(false, "Invalid folder id"); 
+            },
+            None => {}
+        }
+        match self.folders_v2.get(&_folder_id) {
+            Some(_) => {
+                assert!(false, "Folder id already exists"); 
+            },
+            None => {}
+        }
+    }
+
+    pub fn verify_user(&self ,account_id: String, owner_id: String) {
+        assert_eq!(
+            account_id,
+            owner_id,
+            "Owner not match: '{}', '{}'", account_id, String::from(&owner_id[..])
+        );
+    }
+
+    pub fn validate_file_id(&self, _file_id: String) {
+        match self.files.get(&_file_id) {
+            Some(_) => {
+                assert!(false, "file id already exists"); 
+            },
+            None => {}
+        }
+    }
+
+    pub fn validate_folder_type(&self, root_folder: &Option<FolderV2>, folder_type: u8) {
+        match root_folder {
+            Some(root_folder_parsed) => {
+                if root_folder_parsed.folder_type.is_some() {
+                    assert_eq!(
+                        root_folder_parsed.folder_type.unwrap(), 
+                        folder_type, 
+                        "bad behavior"
+                    );
+                } else {
+                    assert!(false, "root folder not found")
+                }
+            },
+            None => {
+                assert!(false, "root folder not found")
+            }
+        }
+    }
+
+    pub fn create_folder_v2(
+        &mut self, 
+        _id: String, 
+        _name: String, 
+        _parent: String, 
+        _password: Option<String>, 
+        _type: Option<u8>, 
+        _created_at: u64
+    ) {
+        self.validate_folder_id(String::from(&_id));
+        let _account_id = env::signer_account_id();
+        if _parent.ne(&_account_id) {
+            let (root_folder, folder_id) = self.get_root(String::from(&_parent[..]));
+            self.verify_accessible(&root_folder, folder_id, String::from(&_account_id[..]));
+        }
         let mut folder_password = None;
-        if _parent.eq(&_account_id) {
-            folder_password = Some(_password);
+        let mut folder_type = None;
+        if _parent.eq(&_account_id) && _type.is_some() {
+            if  _type.unwrap() == 2 {
+                folder_password = _password;
+            }
+            folder_type = _type
         }
         let _parent_id: &str = _parent.as_str();
-        match self.shared_folders.get(&_parent) {
+        match self.folders_v2.get(&_parent) {
             Some(mut folder) => {
                 folder.children.push(String::from(&_id[..]));
-                self.shared_folders.insert(&_parent, &folder);
-                let new_folder = SharedFolder {
+                self.folders_v2.insert(&_parent, &folder);
+                let new_folder = FolderV2 {
                     name: String::from(&_name[..]),
                     files: Vec::new(),
                     parent: String::from(&_parent[..]),
                     children: Vec::new(),
                     folder_password: folder_password,
+                    folder_type: folder_type,
                     created_by: _account_id,
                     created_at: _created_at
                 };
-                self.shared_folders.insert(&_id, &new_folder);
+                self.folders_v2.insert(&_id, &new_folder);
             },
             None => {
                 env::log(format!("Folder not found: '{}'", _parent).as_bytes());
@@ -251,80 +321,37 @@ impl Contract {
         };
     }
 
-    pub fn update_file(&mut self, _id: String, _cid: String, _owner: String, _last_update: u64) {
-        let _account_id = env::signer_account_id();
-        let share_doc_id = format!("{}_{}_{}", _owner, _account_id, _id);
-        match self.shared_file_docs.get(&share_doc_id) {
-            Some(share_doc) => {
-                assert_eq!(
-                    share_doc.permissions,
-                    2,
-                    "You do not have permission to change this folder {}",
-                    share_doc_id
-                );
-            },
-            None => {
-                assert!(
-                    false, 
-                    "You do not have permission to change this folder {}",
-                    share_doc_id
-                );
-            }
-        }
-        match self.files.get(&_id) {
-            Some(mut file) => {
-                file.cid = _cid;
-                file.last_update = _last_update;
-                self.files.insert(&_id, &file);
-            },
-            None => {
-                assert!(
-                    false, 
-                    "File not existed {}",
-                    _id
-                );
-            }
-        }
-    }
-
-    pub fn create_file(
+    pub fn create_file_v2(
         &mut self, 
         _folder: String, 
         _file_id: String, 
         _cid: String, 
         _name: String, 
-        _encrypted_password: String, 
+        _encrypted_password: Option<String>, 
         _file_type: String, 
-        _last_update: u64
+        _created_at: u64
     ) {
+        self.validate_file_id(String::from(&_file_id[..]));
         let _account_id = env::signer_account_id();
-        match self.get_owner_by_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-            },
-            None => {
-                assert!(false, "User not found");
-            }
-        };
-        match self.folders.get(&_folder) {
+        let (root_folder, folder_id) = self.get_root(String::from(&_folder[..]));
+        self.verify_accessible(&root_folder, folder_id, String::from(&_account_id[..]));
+        match self.folders_v2.get(&_folder) {
             Some(mut folder) => {
                 let file = File {
                     cid: _cid,
                     name: _name,
-                    encrypted_password: Some(_encrypted_password),
+                    encrypted_password: _encrypted_password,
                     file_type: _file_type,
-                    last_update: _last_update,
-                    updated_by: _account_id
+                    created_at: _created_at,
+                    created_by: String::from(&_account_id[..]),
+                    updated_by: _account_id,
+                    last_update: _created_at,
                 };
                 let index = folder.files.iter().position(|x| *x == _file_id);
                 if index.is_none() {
                     folder.files.push(String::from(&_file_id[..]));
                 }
-                self.folders.insert(&_folder, &folder);
+                self.folders_v2.insert(&_folder, &folder);
                 self.files.insert(&_file_id, &file);
             },
             None => {
@@ -333,67 +360,14 @@ impl Contract {
         };
     }
 
-    pub fn create_shared_folder_file(&mut self, _folder: String, _file_id: String, _cid: String, _name: String, _file_type: String, _last_update: u64) {
-        let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                if _account_id.ne(&owner[..]) {
-                    let root_shared_folder = self.get_root_id_by_shared_folder_id(String::from(&_folder[..]));
-                    let share_doc_id = format!("{}_{}_{}", owner, _account_id, root_shared_folder);
-                    match self.shared_folder_docs.get(&share_doc_id) {
-                        Some(share_doc) => {
-                            assert_eq!(
-                                share_doc.permissions,
-                                2,
-                                "You do not have permission to change this folder {}",
-                                share_doc_id
-                            );
-                        },
-                        None => {
-                            assert!(
-                                false, 
-                                "You do not have permission to change this folder {}",
-                                share_doc_id
-                            );
-                        }
-                    }
-                }
-            },
-            None => {
-                assert!(false, "You do not have permission to change this folder");
-            }
-        }
-        match self.shared_folders.get(&_folder) {
-            Some(mut folder) => {
-                let file = File {
-                    cid: _cid,
-                    name: _name,
-                    encrypted_password: None,
-                    file_type: _file_type,
-                    last_update: _last_update,
-                    updated_by: _account_id
-                };
-                let index = folder.files.iter().position(|x| *x == _file_id);
-                if index.is_none() {
-                    folder.files.push(String::from(&_file_id[..]));
-                }
-                self.shared_folders.insert(&_folder, &folder);
-                self.files.insert(&_file_id, &file);
-            },
-            None => {
-                env::log(format!("Folder not found: '{}'", _folder).as_bytes());
-            }
-        };
-    }
-
-    pub fn share_file(
+    pub fn share_file_v2(
         &mut self, 
         _file_id: String, 
-        _doc_id: String, 
         _share_with: String, 
         _parent_folder: String, 
         _password: String,
-        _permissions: u8
+        _permissions: u8,
+        _created_at: u64
     ) {
         let _account_id = env::signer_account_id();
         assert_ne!(
@@ -401,95 +375,55 @@ impl Contract {
             String::from(&_share_with[..]), 
             "cannot share to your self {} - {}", &_account_id, &_share_with
         );
-        match self.get_owner_by_folder_id(String::from(&_parent_folder[..])) {
-            Some(owner) => {
+        let (root_folder, folder_id) = self.get_root(String::from(&_parent_folder[..]));
+        
+        self.verify_accessible(&root_folder, folder_id, String::from(&_account_id[..]));
+        self.validate_folder_type(&root_folder, 1);
+        match self.folders_v2.get(&_parent_folder) {
+            Some(folder) => {
+                let index = folder.files.iter().position(|f| String::from(&f[..]).eq(&_file_id[..]));
                 assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
+                    index.is_none(), 
+                    false, 
+                    "file {} not in folder {}", _file_id, _parent_folder
                 );
-                match self.folders.get(&_parent_folder) {
-                    Some(folder) => {
-                        let index = folder.files.iter().position(|f| String::from(&f[..]).eq(&_file_id[..]));
-                        assert_eq!(
-                            index.is_none(), 
-                            false, 
-                            "file {} not in folder {}", _file_id, _parent_folder
-                        );
-                        match self.shared_file_to_user.get(&_doc_id) {
-                            Some(mut users) => {
-                                users.insert(&_share_with);
-                                self.shared_file_to_user.insert(&_doc_id, &users);
-                            },
-                            None => {
-                                let mut prefix = Vec::with_capacity(33);
-                                prefix.push(b'r');
-                                prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_users = UnorderedSet::new(prefix.to_vec());
-                                new_users.insert(&_share_with);
-                                self.shared_file_to_user.insert(&_doc_id, &new_users);
-                            }
-                        }
-                        match self.user_to_shared_file.get(&_share_with) {
-                            Some(mut owner_to_files) => {
-                                match owner_to_files.get(&_account_id) {
-                                    Some(mut files) => {
-                                        files.insert(&_doc_id);
-                                        owner_to_files.insert(&_account_id, &files);
-                                        self.user_to_shared_file.insert(&_share_with, &owner_to_files);
-                                    },
-                                    None => {
-                                        let mut prefix = Vec::with_capacity(33);
-                                        prefix.push(b's');
-                                        prefix.extend(env::sha256(_account_id.as_bytes()));
-                                        let mut new_files: UnorderedSet<String> = UnorderedSet::new(prefix.to_vec());
-                                        new_files.insert(&_doc_id);
-                                        owner_to_files.insert(&_account_id, &new_files);
-                                        self.user_to_shared_file.insert(&_share_with, &owner_to_files);
-                                    }
-                                }
-                            },
-                            None => {
-                                let mut files_prefix = Vec::with_capacity(33);
-                                files_prefix.push(b's');
-                                files_prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_files = UnorderedSet::new(files_prefix.to_vec());
-                                new_files.insert(&_doc_id);
-
-                                let mut account_files_prefix = Vec::with_capacity(33);
-                                account_files_prefix.push(b'm');
-                                account_files_prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_owner_to_files = UnorderedMap::new(account_files_prefix.to_vec());
-                                new_owner_to_files.insert(&_account_id, &new_files);
-                                self.user_to_shared_file.insert(&_share_with, &new_owner_to_files);
-                            }
-                        }
-                        let share_doc = SharedFileDoc {
-                            file: _file_id,
-                            share_password: _password,
-                            permissions: _permissions
-                        };
-                        self.shared_file_docs.insert(&_doc_id, &share_doc);
-                        
-                    }, 
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _parent_folder).as_bytes());
-                    }
-                }
             },
             None => {
-                env::log(format!("Owner not match: '{}'", _parent_folder).as_bytes());
+                env::log(format!("Folder not found: '{}'", _parent_folder).as_bytes());
+            }
+        }
+        let share_doc_id = format!("{}_{}_{}", _account_id, _share_with, _file_id);
+        let share_doc = SharedDoc {
+            doc_id: _file_id,
+            share_password: _password,
+            permissions: _permissions,
+            created_at: _created_at,
+            doc_type: 1
+        };
+        self.shared_docs.insert(&share_doc_id, &share_doc);
+        match self.shared_docs_of_user.get(&_share_with) {
+            Some(mut user_shared_with_docs) => {
+                user_shared_with_docs.insert(&share_doc_id);
+                self.shared_docs_of_user.insert(&_share_with ,&user_shared_with_docs);
+            },
+            None => {
+                let mut files_prefix = Vec::with_capacity(33);
+                files_prefix.push(b's');
+                files_prefix.extend(env::sha256(_account_id.as_bytes()));
+                let mut new_shared_set = UnorderedSet::new(files_prefix.to_vec());
+                new_shared_set.insert(&share_doc_id);
+                self.shared_docs_of_user.insert(&_share_with ,&new_shared_set);
             }
         }
     }
 
-    pub fn share_folder(
+    pub fn share_folder_v2(
         &mut self, 
         _folder_id: String, 
-        _doc_id: String, 
         _share_with: String, 
         _password: String,
-        _permissions: u8
+        _permissions: u8,
+        _created_at: u64,
     ) {
         let _account_id = env::signer_account_id();
         assert_ne!(
@@ -497,162 +431,57 @@ impl Contract {
             String::from(&_share_with[..]), 
             "cannot share to your self"
         );
-        match self.get_owner_by_shared_folder_id(String::from(&_folder_id[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.shared_folders.get(&_folder_id) {
-                    Some(folder) => {
-                        match self.shared_folder_to_user.get(&_doc_id) {
-                            Some(mut users) => {
-                                users.insert(&_share_with);
-                                self.shared_folder_to_user.insert(&_doc_id, &users);
-                            },
-                            None => {
-                                let mut prefix = Vec::with_capacity(33);
-                                prefix.push(b'n');
-                                prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_users = UnorderedSet::new(prefix.to_vec());
-                                new_users.insert(&_share_with);
-                                self.shared_folder_to_user.insert(&_doc_id, &new_users);
-                            }
-                        }
-                        match self.user_to_shared_folder.get(&_share_with) {
-                            Some(mut user_to_folder) => {
-                                match user_to_folder.get(&_account_id) {
-                                    Some(mut folders) => {
-                                        folders.insert(&_doc_id);
-                                        user_to_folder.insert(&_account_id, &folders);
-                                        self.user_to_shared_folder.insert(&_share_with, &user_to_folder);
-                                    },
-                                    None => {
-                                        let mut prefix = Vec::with_capacity(33);
-                                        prefix.push(b'a');
-                                        prefix.extend(env::sha256(_account_id.as_bytes()));
-                                        let mut new_folders: UnorderedSet<String> = UnorderedSet::new(prefix.to_vec());
-                                        new_folders.insert(&_doc_id);
-                                        user_to_folder.insert(&_account_id, &new_folders);
-                                        self.user_to_shared_folder.insert(&_share_with, &user_to_folder);
-                                    }
-                                }
-                            },
-                            None => {
-                                let mut files_prefix = Vec::with_capacity(33);
-                                files_prefix.push(b'a');
-                                files_prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_folders = UnorderedSet::new(files_prefix.to_vec());
-                                new_folders.insert(&_doc_id);
-
-                                let mut account_folders_prefix = Vec::with_capacity(33);
-                                account_folders_prefix.push(b'n');
-                                account_folders_prefix.extend(env::sha256(_account_id.as_bytes()));
-                                let mut new_user_to_folders = UnorderedMap::new(account_folders_prefix.to_vec());
-                                
-                                new_user_to_folders.insert(&_account_id, &new_folders);
-                                self.user_to_shared_folder.insert(&_share_with, &new_user_to_folders);
-                            }
-                        }
-                        let share_doc = SharedFolderDoc {
-                            folder: _folder_id,
-                            share_password: _password,
-                            permissions: _permissions
-                        };
-                        self.shared_folder_docs.insert(&_doc_id, &share_doc);
-                    }, 
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _folder_id).as_bytes());
-                    }
-                }
+        let (root_folder, root_folder_id) = self.get_root(String::from(&_folder_id[..]));
+        assert_eq!(
+            String::from(&root_folder_id[..]), 
+            String::from(&_folder_id[..]), 
+            "this is not the root folder"
+        );
+        self.verify_accessible(&root_folder, root_folder_id, String::from(&_account_id[..]));
+        self.validate_folder_type(&root_folder, 2);
+        let share_doc_id = format!("{}_{}_{}", _account_id, _share_with, _folder_id);
+        let share_doc = SharedDoc {
+            doc_id: _folder_id,
+            share_password: _password,
+            permissions: _permissions,
+            created_at: _created_at,
+            doc_type: 2
+        };
+        self.shared_docs.insert(&share_doc_id, &share_doc);
+        match self.shared_docs_of_user.get(&_share_with) {
+            Some(mut user_shared_with_docs) => {
+                user_shared_with_docs.insert(&share_doc_id);
+                self.shared_docs_of_user.insert(&_share_with ,&user_shared_with_docs);
             },
             None => {
-                env::log(format!("Owner not match: '{}'", _folder_id).as_bytes());
+                let mut files_prefix = Vec::with_capacity(33);
+                files_prefix.push(b's');
+                files_prefix.extend(env::sha256(_account_id.as_bytes()));
+                let mut new_shared_set = UnorderedSet::new(files_prefix.to_vec());
+                new_shared_set.insert(&share_doc_id);
+                self.shared_docs_of_user.insert(&_share_with ,&new_shared_set);
             }
         }
     }
 
-    pub fn remove_file(&mut self, _folder: String, _file: String) {
+    pub fn remove_file_v2(&mut self, _folder: String, _file: String) {
         let _account_id = env::signer_account_id();
-        match self.get_owner_by_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.folders.get(&_folder) {
-                    Some(mut folder) => {
-                        let index = folder.files.iter().position(|x| *x == _file).unwrap();
-                        folder.files.remove(index);
-                        self.folders.insert(&_folder, &folder);
-                        self.files.remove(&_file);
-                    },
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _folder).as_bytes());
-                    }
-                };
+        let (root_folder, _) = self.get_root(String::from(&_folder[..]));
+        match root_folder {
+            Some(root_folder_unwrapped) => {
+                let owner_id = root_folder_unwrapped.parent;
+                self.verify_user(_account_id, owner_id);
             },
             None => {
-                env::log(format!("Owner not found: '{}'", _folder).as_bytes());
+                assert!(false, "root folder not found")
             }
         }
-    }
-
-    pub fn remove_shared_file(&mut self, _folder: String, _file: String) {
-        let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.shared_folders.get(&_folder) {
-                    Some(mut folder) => {
-                        let index = folder.files.iter().position(|x| *x == _file).unwrap();
-                        folder.files.remove(index);
-                        self.shared_folders.insert(&_folder, &folder);
-                        self.files.remove(&_file);
-                    },
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _folder).as_bytes());
-                    }
-                };
-            },
-            None => {
-                env::log(format!("Owner not found: '{}'", _folder).as_bytes());
-            }
-        }
-    }
-
-    pub fn remove_folder(&mut self, _folder: String) {
-        let _account_id = env::signer_account_id();
-        match self.get_owner_by_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.folders.get(&_folder) {
-                    Some(folder) => {
-                        match self.folders.get(&folder.parent) {
-                            Some(mut parent_folder) => {
-                                let index = parent_folder.children.iter().position(|x| *x == _folder).unwrap();
-                                parent_folder.children.remove(index);
-                                self.folders.remove(&_folder);
-                                self.folders.insert(&folder.parent, &parent_folder);
-                            },
-                            None => {}
-                        }
-                        self.folders.remove(&_folder);
-                    },
-                    None => {
-                        env::log(format!("Folder not found: '{}'", _folder).as_bytes());
-                    }
-                };
+        match self.folders_v2.get(&_folder) {
+            Some(mut folder) => {
+                let index = folder.files.iter().position(|x| *x == _file).unwrap();
+                folder.files.remove(index);
+                self.folders_v2.insert(&_folder, &folder);
+                self.files.remove(&_file);
             },
             None => {
                 env::log(format!("Folder not found: '{}'", _folder).as_bytes());
@@ -660,173 +489,91 @@ impl Contract {
         }
     }
 
-    pub fn remove_shared_folder(&mut self, _folder: String) {
+    pub fn remove_folder_v2(&mut self, _folder: String) {
         let _account_id = env::signer_account_id();
-        match self.get_owner_by_shared_folder_id(String::from(&_folder[..])) {
-            Some(owner) => {
-                assert_eq!(
-                    String::from(&_account_id[..]), 
-                    String::from(&owner[..]), 
-                    "Owner not match: '{}', '{}'", _account_id, String::from(&owner[..])
-                );
-                match self.shared_folders.get(&_folder) {
-                    Some(folder) => {
-                        match self.shared_folders.get(&folder.parent) {
-                            Some(mut parent_folder) => {
-                                let index = parent_folder.children.iter().position(|x| *x == _folder).unwrap();
-                                parent_folder.children.remove(index);
-                                self.folders.remove(&_folder);
-                                self.shared_folders.insert(&folder.parent, &parent_folder);
-                            },
-                            None => {}
-                        }
-                        self.shared_folders.remove(&_folder);
-                    },
-                    None => {
-
-                    }
-                };
+        let (root_folder, _) = self.get_root(String::from(&_folder[..]));
+        match root_folder {
+            Some(root_folder_unwrapped) => {
+                let owner_id = root_folder_unwrapped.parent;
+                self.verify_user(_account_id, owner_id);
             },
             None => {
-                env::log(format!("You are not owner").as_bytes());
+                assert!(false, "root folder not found")
+            }
+        }
+        match self.folders_v2.get(&_folder) {
+            Some(folder) => {
+                match self.folders_v2.get(&folder.parent) {
+                    Some(mut parent_folder) => {
+                        let index = parent_folder.children.iter().position(|x| *x == _folder).unwrap();
+                        parent_folder.children.remove(index);
+                        self.folders_v2.remove(&_folder);
+                        self.folders_v2.insert(&folder.parent, &parent_folder);
+                    },
+                    None => {}
+                }
+                self.folders.remove(&_folder);
+            },
+            None => {
+                env::log(format!("Folder not found: '{}'", _folder).as_bytes());
             }
         };
     }
 
-    pub fn get_shared_folders_of_user(&self, _account_id: String) -> Option<HashMap<String, Vec<String>>> {
-        match self.user_to_shared_folder.get(&_account_id) {
-            Some(shared_folder_map) => {
-                let keys = shared_folder_map.keys_as_vector();
-                let mut result: HashMap<String, Vec<String>> = HashMap::new();
-                for key in keys.iter() {
-                    match shared_folder_map.get(&key) {
-                        Some(value) => {
-                            result.insert(key, value.to_vec());
-                        },
-                        None => {}
-                    }
-                };
-                Some(result)
+    pub fn get_shared_doc_of_user(&self, _account_id: String) -> Vec<String> {
+        match self.shared_docs_of_user.get(&_account_id) {
+            Some(shared_docs) => {
+                shared_docs.to_vec()
             },
-            None => None
+            None => {
+                vec![]
+            }
         }
     }
 
-    pub fn get_shared_user_of_folder(&self, _file: String) -> Option<Vec<String>> {
-        match self.shared_folder_to_user.get(&_file) {
-            Some(list) => Some(list.to_vec()),
-            None => None
+    pub fn get_shared_doc_detail(&self, _doc_id: String) -> (Option<SharedDoc>, Option<FolderV2>, Option<File>, String) {
+        match self.shared_docs.get(&_doc_id) {
+            Some(doc) => {
+                let file = self.files.get(&doc.doc_id);
+                let folder = self.folders_v2.get(&doc.doc_id);
+                (Some(doc), folder, file, _doc_id)
+            }
+            None => {
+                (None, None, None, _doc_id)
+            }
         }
-    }
+    } 
 
-    pub fn get_shared_files_of_user(&self, _account_id: String) -> Option<HashMap<String, Vec<String>>> {
-        match self.user_to_shared_file.get(&_account_id) {
-            Some(user_shared_file) => {
-                let keys = user_shared_file.keys_as_vector();
-                let mut result: HashMap<String, Vec<String>> = HashMap::new();
-                for key in keys.iter() {
-                    match user_shared_file.get(&key) {
-                        Some(value) => {
-                            result.insert(key, value.to_vec());
-                        },
-                        None => {}
-                    }
-                };
-                Some(result)
-            },
-            None => None
-        }
-    }
-
-    pub fn get_shared_file_doc(&self, _doc: String) -> Option<SharedFileDoc> {
-        match self.shared_file_docs.get(&_doc) {
-            Some(doc) => Some(doc),
-            None => None
-        }
-    }
-
-    pub fn get_shared_folder_doc(&self, _doc: String) -> Option<SharedFolderDoc> {
-        match self.shared_folder_docs.get(&_doc) {
-            Some(doc) => Some(doc),
-            None => None
-        }
-    }
-
-    pub fn get_shared_folder_docs_by_owner(&self, _account_id: String) -> Vec<(String, String, String, SharedFolder, u8, String)> {
-        let mut result: Vec<(String, String, String, SharedFolder, u8, String)> = Vec::new();
-        match self.user_to_shared_folder.get(&_account_id) {
-            Some(account_to_docs) => {
-                let accounts = account_to_docs.keys_as_vector();
-                for account in accounts.iter() {
-                    match account_to_docs.get(&account) {
-                        Some(set_docs) => {
-                            let doc_id_keys = set_docs.to_vec();
-                            for doc_id in doc_id_keys.iter() {
-                                match self.shared_folder_docs.get(&doc_id) {
-                                    Some(doc) => {
-                                        match self.shared_folders.get(&doc.folder) {
-                                            Some(folder) => {
-                                                result.push((
-                                                    String::from(&account[..]), 
-                                                    doc.folder, 
-                                                    doc.share_password, 
-                                                    folder, 
-                                                    doc.permissions, 
-                                                    doc_id.to_string()
-                                                ));
-                                            },
-                                            None => {}
-                                        }
-                                    }, 
-                                    None => {}
-                                }
+    pub fn get_root(&self, folder_id: String) -> (Option<FolderV2>, String) {
+        let mut result = String::from("");
+        match self.folders_v2.get(&folder_id) {
+            Some(folder_by_id) => {
+                let mut current_id = String::from(&folder_id[..]);
+                let mut parent_id = String::from(&folder_by_id.parent[..]);
+                while current_id.ne(&parent_id[..]) {
+                    match self.folders_v2.get(&parent_id) {
+                        Some(folder) => {
+                            let temp = current_id.clone();
+                            current_id = String::from(&parent_id[..]);
+                            parent_id = folder.parent;
+                            if current_id.eq(&parent_id) {
+                                result = String::from(&temp[..]);
                             }
                         },
-                        None => {}
-                    }
+                        None => {},
+                    };
                 };
-            },
-            None => {}
+            }, 
+            None => {
+            }
         }
-        result
-    }
-
-    pub fn get_shared_file_docs_by_owner(&self, _account_id: String) ->Vec<(String, String, String, File, u8)> {
-        let mut result: Vec<(String, String, String, File, u8)> = Vec::new();
-        match self.user_to_shared_file.get(&_account_id) {
-            Some(account_to_docs) => {
-                let accounts = account_to_docs.keys_as_vector();
-                for account in accounts.iter() {
-                    match account_to_docs.get(&account) {
-                        Some(set_docs) => {
-                            let doc_id_keys = set_docs.to_vec();
-                            for doc_id in doc_id_keys.iter() {
-                                match self.shared_file_docs.get(&doc_id) {
-                                    Some(doc) => {
-                                        match self.files.get(&doc.file) {
-                                            Some(file) => {
-                                                result.push((String::from(&account[..]), doc.file, doc.share_password, file, doc.permissions));
-                                            },
-                                            None => {}
-                                        }
-                                    }, 
-                                    None => {}
-                                }
-                            }
-                        },
-                        None => {}
-                    }
-                };
-            },
-            None => {}
-        }
-        result
-    }
-
-    pub fn get_shared_user_of_file(&self, _file: String) -> Option<Vec<String>> {
-        match self.shared_file_to_user.get(&_file) {
-            Some(list) => Some(list.to_vec()),
-            None => None
+        match self.folders_v2.get(&result) {
+            Some(root) => {
+                (Some(root), result)
+            }, 
+            None => {
+                (None, result)
+            }
         }
     }
 
@@ -837,238 +584,65 @@ impl Contract {
         }
     }
 
-    pub fn get_root_shared_folder(&self, _current: String, _account_id: String) -> Option<(String, SharedFolder)> {
-        let mut current_id = String::from(&_current[..]);
-        let mut root_id = String::from("");
-        while current_id.ne(&_account_id) {
-            match self.shared_folders.get(&current_id) {
-                Some(folder) => {
-                    root_id = String::from(&current_id[..]);
-                    current_id = folder.parent;
-                },
-                None => {},
-            };
-        };
-        match self.shared_folders.get(&root_id) {
-            Some(folder) => Some((root_id, folder)),
-            None => None,
-        }
-    }
-
-    pub fn get_owner_by_folder_id(&self, _folder_id: String) -> Option<String> {
-        let mut current_id = String::from(&_folder_id[..]);
-        while self.users.get(&current_id).is_none() {
-            match self.folders.get(&current_id) {
-                Some(folder) => {
-                    current_id = folder.parent;
-                },
-                None => {},
-            };
-        };
-        Some(current_id)
-    }
-
-    pub fn get_owner_by_shared_folder_id(&self, _shared_folder_id: String) -> Option<String> {
-        // match self.shared_folders.get(&_shared_folder_id) {
-        //     Some(folder_by_id) => {
-        //         let mut current_id = String::from(&_shared_folder_id[..]);
-        //         let mut parent_id = String::from(&folder_by_id.parent[..]);
-        //         while current_id.ne(&parent_id[..]) {
-        //             match self.shared_folders.get(&parent_id) {
-        //                 Some(folder) => {
-        //                     parent_id = folder.parent;
-        //                     current_id = String::from(&parent_id[..]);
-        //                 },
-        //                 None => {},
-        //             };
-        //         };
-        //         Some(current_id)
-        //     }, 
-        //     None => {
-        //         None
-        //     }
-        // }
-        let mut current_id = String::from(&_shared_folder_id[..]);
-        while self.users.get(&current_id).is_none() {
-            match self.shared_folders.get(&current_id) {
-                Some(folder) => {
-                    current_id = folder.parent;
-                },
-                None => {},
-            };
-        };
-        Some(current_id)
-    }
-
-    pub fn get_root_id_by_shared_folder_id(&self, _shared_folder_id: String) -> String {
-        let mut result = String::from("");
-        match self.shared_folders.get(&_shared_folder_id) {
-            Some(folder_by_id) => {
-                let mut current_id = String::from(&_shared_folder_id[..]);
-                let mut parent_id = String::from(&folder_by_id.parent[..]);
-                while current_id.ne(&parent_id[..]) {
-                    env::log(format!("current_id : '{}', parent_id: {}", current_id, parent_id).as_bytes());
-                    match self.shared_folders.get(&parent_id) {
-                        Some(folder) => {
-                            if folder.parent.eq(&parent_id) {
-                                result = current_id;
-                            }
-                            current_id = String::from(&parent_id[..]);
-                            parent_id = folder.parent;
-                        },
-                        None => {},
-                    };
-                };
-            }, 
-            None => {
-            }
-        }
-        result
-    }
-
-    pub fn get_files_in_folder(&self, folders: Vec<String>, files: &mut Vec<String>) {
-        for folder_id in folders.iter() {
-            match self.folders.get(&folder_id) {
-                Some(folder) => {
-                    files.extend(folder.files);
-                    self.get_files_in_folder(folder.children, files);
-                },
-                None => {
-    
-                },
-            }
-        }
-    }
-
-    pub fn get_all_file_in_folder(&self, folder_id: String) -> Vec<(File, String)> {
-        let mut files: Vec<(File, String)> = Vec::new();
-        let mut file_ids: Vec<String> = Vec::new();
-        match self.folders.get(&folder_id) {
-            Some(folder) => {
-                let folder_vec = vec![folder_id];
-                self.get_files_in_folder(folder_vec, &mut file_ids);
-            },
-            None => {
-
-            },
-        }
-        for file_id in file_ids.iter() {
-            match self.files.get(&file_id) {
-                Some(file) => {
-                    files.push((file, file_id.to_string()));
-                },
-                None => {
-    
-                },
-            }
-        }
-        files
-    }
-
-    pub fn get_files_in_shared_folder(&self, folders: Vec<String>, files: &mut Vec<String>) {
-        for folder_id in folders.iter() {
-            match self.shared_folders.get(&folder_id) {
-                Some(folder) => {
-                    files.extend(folder.files);
-                    self.get_files_in_shared_folder(folder.children, files);
-                },
-                None => {
-    
-                },
-            }
-        }
-    }
-
-    pub fn get_all_file_in_shared_folder(&self, folder_id: String) -> Vec<(File, String)> {
-        let mut files: Vec<(File, String)> = Vec::new();
-        let mut file_ids: Vec<String> = Vec::new();
-        match self.shared_folders.get(&folder_id) {
-            Some(folder) => {
-                let folder_vec = vec![folder_id];
-                self.get_files_in_shared_folder(folder_vec, &mut file_ids);
-            },
-            None => {
-
-            },
-        }
-        for file_id in file_ids.iter() {
-            match self.files.get(&file_id) {
-                Some(file) => {
-                    files.push((file, file_id.to_string()));
-                },
-                None => {
-    
-                },
-            }
-        }
-        files
-    }
-
-    pub fn get_folder_info(&self, folder_id: String) -> Option<Folder> {
-        match self.folders.get(&folder_id) {
+    pub fn get_folder_info_v2(&self, folder_id: String) -> Option<FolderV2> {
+        match self.folders_v2.get(&folder_id) {
             Some(folder) => Some(folder),
             None => None,
         }
     }
 
-    pub fn get_shared_folder_info(&self, folder_id: String) -> Option<SharedFolder> {
-        match self.shared_folders.get(&folder_id) {
-            Some(folder) => Some(folder),
-            None => None,
-        }
-    }
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use near_sdk::MockedBlockchain;
-    use near_sdk::{testing_env, VMContext};
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use near_sdk::MockedBlockchain;
+//     use near_sdk::{testing_env, VMContext};
 
-    // mock the context for testing, notice "signer_account_id" that was accessed above from env::
-    fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
-        VMContext {
-            current_account_id: "alice_near".to_string(),
-            signer_account_id: "bob_near".to_string(),
-            signer_account_pk: vec![0, 1, 2],
-            predecessor_account_id: "carol_near".to_string(),
-            input,
-            block_index: 0,
-            block_timestamp: 0,
-            account_balance: 0,
-            account_locked_balance: 0,
-            storage_usage: 0,
-            attached_deposit: 0,
-            prepaid_gas: 10u64.pow(18),
-            random_seed: vec![0, 1, 2],
-            is_view,
-            output_data_receivers: vec![],
-            epoch_height: 19,
-        }
-    }
+//     // mock the context for testing, notice "signer_account_id" that was accessed above from env::
+//     fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
+//         VMContext {
+//             current_account_id: "alice_near".to_string(),
+//             signer_account_id: "bob_near".to_string(),
+//             signer_account_pk: vec![0, 1, 2],
+//             predecessor_account_id: "carol_near".to_string(),
+//             input,
+//             block_index: 0,
+//             block_timestamp: 0,
+//             account_balance: 0,
+//             account_locked_balance: 0,
+//             storage_usage: 0,
+//             attached_deposit: 0,
+//             prepaid_gas: 10u64.pow(18),
+//             random_seed: vec![0, 1, 2],
+//             is_view,
+//             output_data_receivers: vec![],
+//             epoch_height: 19,
+//         }
+//     }
 
-    #[test]
-    fn set_then_get_greeting() {
-        let context = get_context(vec![], false);
-        testing_env!(context);
-        let mut contract = Contract::default();
-        // contract.set_greeting("howdy".to_string());
-        // assert_eq!(
-        //     "howdy".to_string(),
-        //     contract.get_greeting("bob_near".to_string())
-        // );
-    }
+//     #[test]
+//     fn set_then_get_greeting() {
+//         let context = get_context(vec![], false);
+//         testing_env!(context);
+//         let mut contract = Contract::default();
+//         // contract.set_greeting("howdy".to_string());
+//         // assert_eq!(
+//         //     "howdy".to_string(),
+//         //     contract.get_greeting("bob_near".to_string())
+//         // );
+//     }
 
-    #[test]
-    fn get_default_greeting() {
-        let context = get_context(vec![], true);
-        testing_env!(context);
-        let contract = Contract::default();
-        // this test did not call set_greeting so should return the default "Hello" greeting
-        // assert_eq!(
-        //     "Hello".to_string(),
-        //     contract.get_greeting("francis.near".to_string())
-        // );
-    }
-}
+//     #[test]
+//     fn get_default_greeting() {
+//         let context = get_context(vec![], true);
+//         testing_env!(context);
+//         let contract = Contract::default();
+//         // this test did not call set_greeting so should return the default "Hello" greeting
+//         // assert_eq!(
+//         //     "Hello".to_string(),
+//         //     contract.get_greeting("francis.near".to_string())
+//         // );
+//     }
+// }

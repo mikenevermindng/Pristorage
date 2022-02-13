@@ -55,15 +55,16 @@ const ShareFileButton = (props) => {
                 message.error(`Fail to encrypt password`)
                 return
             }
+            const current = new Date().getTime()
             const params = {
                 _file_id: props.id, 
-                _doc_id: `${userCurrent.account}_${values.account}_${props.id}`, 
                 _share_with: values.account, 
                 _parent_folder: props.folder, 
                 _password: cipher,
-                _permissions: values.permissions
+                _permissions: values.permissions,
+                _created_at: current
             }
-            const data = await window.contract.share_file(params)
+            const data = await window.contract.share_file_v2(params)
             history.go(0)
         }
     })
@@ -107,7 +108,7 @@ const ShareFileButton = (props) => {
                 <label className="form-label">Permission</label>
                 <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('permissions', parseInt(val))}>
                     <Option value="1">Read only</Option>
-                    <Option value="2">Edit</Option>
+                    {/* <Option value="2">Edit</Option> */}
                 </Select>
             </div>
             {errors.permissions && <span className="error-text">{errors.permissions}</span>}

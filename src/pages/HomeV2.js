@@ -5,7 +5,6 @@ import {
     UploadOutlined,
     InboxOutlined,
     DownloadOutlined,
-    ShareAltOutlined,
     FolderOpenOutlined,
     FileProtectOutlined
 } from '@ant-design/icons';
@@ -16,65 +15,79 @@ import {
     Input, 
     Upload, 
     message, 
-    Tooltip 
+    Tooltip,
+    Select 
 } from 'antd';
 import { 
     useSelector, 
-    useDispatch 
 } from 'react-redux';
-import {getFolderInfo} from '../store/slice/commonFolder.slice'
 import { v4 as uuidv4 } from 'uuid';
-import {wrap} from 'comlink'
 import {useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
-    storeFiles, 
-    retrieveFiles,
-    checkFileStatus,
-    validateToken
-} from '../utils/web3.storage'
-import {
-    getPublicKeyByPrivateKey,
     encryptStringTypeData,
-    decryptStringTypeData
 } from '../utils/keypair.utils'
-import {concatenateBlobs, saveFile} from '../utils/file.utils'
-import {getUrlParameter} from '../utils/url.utils'
 import { useHistory } from 'react-router-dom';
 import ShareFileButton from '../components/ShareFileButton'
+import ShareFolderButton from '../components/ShareFolderButton'
 import DeleteButton from '../components/DeleteButton'
+import useFetchFolder from '../hook/useFetchFolder'
+import useFileCreate from '../hook/useFileCreate'
+import useDownloadFile from '../hook/useDownloadFile'
+import useFilePreview from '../hook/useFilePreview'
 
 const { Dragger } = Upload;
+const {Option} = Select
 
 const folderValidationSchema = Yup.object().shape({
     name: Yup.string().required('Invalid name'),
+    type: Yup.number().required('Invalid type'),
 });
 
 export default function Home() {
 
-    const [data, setData] = useState([])
     const history = useHistory()
-
-    const dispatch = useDispatch()
-    const {loading: commonFolderLoading, current: commonFolderCurrent} = useSelector(state => state.commonFolder)
+    const {
+        loading: folderLoading, 
+        current: folderCurrent, 
+        root: rootFolder,
+        folderId: currentFolderId,
+        parentFolder
+    } = useSelector(state => state.folderV2)
     const {loading: loadingCurrent, current: userCurrent} = useSelector(state => state.user)
+    const {loading: submitting, fileSubmit} = useFileCreate()
+    const {loading: downloading, download} = useDownloadFile()
+    useFetchFolder()
+    const {
+        preview
+    } = useFilePreview()
 
     const formik = useFormik({
         initialValues: {
             name: '',
+            type: null
         },
         validationSchema: folderValidationSchema,
         onSubmit: async (values) => {
             const currentTimeStamp = new Date().getTime()
             const id = uuidv4()
-            const folder = {
-                _id: id, 
-                _name: values.name, 
-                _parent: commonFolderCurrent.id,
-                _created_at: currentTimeStamp
+            const folder_password = uuidv4()
+            const {success, cipher} = await encryptStringTypeData(userCurrent.publicKey, folder_password)
+            if (success) {
+                const folder = {
+                    _id: id, 
+                    _name: values.name, 
+                    _parent: currentFolderId,
+                    _created_at: currentTimeStamp,
+                    _type: parseInt(values.type),
+                    _password: cipher,
+                }
+                await window.contract.create_folder_v2(folder)
+                history.go(0)
             }
-            const data = await window.contract.create_folder(folder)
-            history.go(0)
+            else {
+                message.error("Invalid private key")
+            }
         }
     })
 
@@ -99,109 +112,47 @@ export default function Home() {
         setIsModalUploadVisible(false);
     };
     
-    useEffect(() => {
-        const fetchData = async () => {
-            const folderId = getUrlParameter('folder')
-            if (folderId) {
-                dispatch(getFolderInfo(folderId))
-            } else {
-                const {accountId} = await window.walletConnection.account()
-                dispatch(getFolderInfo(accountId))
-            }
-        }
-        fetchData()
-    }, [])
-
-    const storeToWeb3Storage = async (files, filename, fileType, encryptedPassword) => {
-        const totalSize = files.map(f => f.size).reduce((a, b) => a + b, 0)
-        let uploaded = 0
-
-        const onRootCidReady = cid => {
-            console.log('upcommonFolderLoading files with cid:', cid)
-        }
-    
-        const onStoredChunk = size => {
-            uploaded += size
-            const pct = uploaded / totalSize
-            console.log(`UpcommonFolderLoading... ${pct.toFixed(2) * 100}% complete`)
-        }
-
-        const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
-        const current = new Date().getTime()
-        await window.contract.create_file({
-            _folder: commonFolderCurrent.id, 
-            _file_id: uuidv4(),
-            _cid: cid, 
-            _name: filename, 
-            _encrypted_password: encryptedPassword, 
-            _file_type: fileType ,
-            _last_update: current
-        })
-        history.go(0)
-    }
-
-    const fileSubmit = async (file) => {
-        const worker = new Worker('../worker.js')
-        const {encryptByWorker} = wrap(worker)
-        const password = uuidv4()
-        const encryptedFiles = await encryptByWorker(file, password)
-        const {success, cipher} = await encryptStringTypeData(userCurrent.publicKey, password)
-        console.log({success, cipher})
-        if (success) {
-            await storeToWeb3Storage(encryptedFiles, file.name, file.type, cipher)
-            setIsModalUploadVisible(false)
-            history.go(0)
-        } else {
-            message.error('Fail to encrypt file ' + file.name)
-        }
-    }
-
-    useEffect(() => {
-        const files = commonFolderCurrent.files.map(file => {
-            return {
-                id: file.cid,
-                ...file,
-                isFolder: false
-            }
-        })
-        const folders = commonFolderCurrent.children.map(child => {
-            return {
-                id: child.id,
-                ...child,
-                isFolder: true,
-                children: null,
-            }
-        })
-        setData([
-            {
-                name: "...",
-                id: commonFolderCurrent.parent,
-                isFolder: true,
-                isTop: true
-            },
-            ...folders, 
-            ...files]
-        )
-    }, [commonFolderCurrent])
-
     const props = {
         name: 'file',
         multiple: false,
         onChange(info) {
             const { status } = info.file;
             if (status !== 'uploading') {
-                fileSubmit(info.file.originFileObj)
+                fileSubmit(info.file.originFileObj, rootFolder, currentFolderId)
             }
         },
         onDrop(e) {
             console.log('Dropped files', e.dataTransfer.files);
-            // fileSubmit(e.dataTransfer.files[0])
         },
     };
 
     const redirectToFolder = (id) => {
-        history.push(`/?folder=${id}`)
+        history.push(`/v2?folder=${id}`)
         history.go(0)
+    }
+
+    const downloadFile = async (record) => {
+        const {folder_type: folderType, folder_password} = rootFolder
+        const {cid, encrypted_password, name, file_type} = record
+        if (folderType === 1) {
+            download(cid, encrypted_password, name, file_type)
+        } else if (folderType === 2) {
+            download(cid, folder_password, name, file_type)
+        } else {
+            message.error('download error, invalid file')
+        }
+    }
+
+    const previewFile = async (record) => {
+        const {folder_type: folderType, folder_password} = rootFolder
+        const {cid, encrypted_password, name, file_type} = record
+        if (folderType === 1) {
+            preview(cid, encrypted_password, name, file_type)
+        } else if (folderType === 2) {
+            preview(cid, folder_password, name, file_type)
+        } else {
+            message.error('preview error, invalid file')
+        }
     }
 
     const columns = [
@@ -212,8 +163,9 @@ export default function Home() {
                 return (
                     <div>
                         {record.isFolder  ? 
-                            <a onClick={() => redirectToFolder(record.id)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
-                            <span><FileProtectOutlined /> {record.name}</span>
+                            <a onClick={() => redirectToFolder(record.id)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>
+                            :
+                            <a onClick={() => previewFile(record)}><FileProtectOutlined /> {record.name}</a>
                         }
                     </div>
                 )
@@ -231,48 +183,38 @@ export default function Home() {
                         {!record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
                                 <Button
-                                    onClick={async () => {
-                                        const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, record.encrypted_password)
-                                        if (success) {
-                                            const files = await retrieveFiles(userCurrent.web3token, record.cid)
-                                            const worker = new Worker('../worker.js')
-                                            const {decryptByWorker} = wrap(worker)
-                                            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                                            console.log(decryptedFile)
-                                            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                                                saveFile(blob, record.name)
-                                            })
-                                        } else {
-                                            message.error('Fail to download file')
-                                        }
-                                    }}
+                                    onClick={async () => downloadFile(record)}
                                 >
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
 
-                            <Tooltip title="Share">
-                                <ShareFileButton {...{...record, folder: commonFolderCurrent.id}} />
-                            </Tooltip>
+                            {rootFolder.folder_type === 1 &&<Tooltip title="Share file">
+                                <ShareFileButton {...{...record, folder: currentFolderId}} />
+                            </Tooltip>}
 
                             <Tooltip title="Remove">
                                 <DeleteButton 
                                     type="File" 
                                     name={record.name} 
                                     handleDelete={async () => {
-                                        await window.contract.remove_file({_folder: commonFolderCurrent.id, _file: record.id})
+                                        await window.contract.remove_file_v2({_folder: currentFolderId, _file: record.id})
                                         history.go(0)
                                     }}
                                 />
                             </Tooltip>
                         </div>}
                         {record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
+                            {record.parent === userCurrent.account && record.folder_type === 2 &&<Tooltip title="Share file">
+                                <ShareFolderButton {...{...record, folder: currentFolderId}} />
+                            </Tooltip>}
+
                             <Tooltip title="Remove">
                                 <DeleteButton 
                                     type="Folder" 
                                     name={record.name} 
                                     handleDelete={async () => {
-                                        await window.contract.remove_folder({_folder: record.id})
+                                        await window.contract.remove_folder_v2({_folder: record.id})
                                         history.go(0)
                                     }}
                                 />
@@ -298,7 +240,7 @@ export default function Home() {
                         <Button 
                             icon={<FolderAddOutlined style={{ fontSize: '18px' }} />} 
                             onClick={showModalCreateFolder} 
-                            loading={commonFolderLoading} 
+                            loading={folderLoading} 
                         >
                             Create folder
                         </Button>
@@ -308,14 +250,24 @@ export default function Home() {
                             onOk={handleSubmit} 
                             onCancel={handleCancelCreateFolder}
                         >
-                            <label className="form-label">Folder name</label>
-                            <div className="input-group mb-3">
-                                <Input placeholder="Folder name" onChange={handleChange('name')} />
+                            <div>
+                                <label className="form-label">Folder name</label>
+                                <div className="input-group mb-3">
+                                    <Input placeholder="Folder name" onChange={handleChange('name')} />
+                                </div>
+                                {errors.name && <span className="error-text">{errors.name}</span>}
                             </div>
-                            {errors.name && <span className="error-text">{errors.name}</span>}
+                            <div>
+                                <label className="form-label">Folder type</label>
+                                <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('type', parseInt(val))}>
+                                    <Option value="1">Private</Option>
+                                    <Option value="2">Shareable</Option>
+                                </Select>
+                                {errors.type && <span className="error-text">{errors.type}</span>}
+                            </div>
                         </Modal>
                     </div>
-                    {commonFolderCurrent.id !== userCurrent.account && <div className="action-button">
+                    {currentFolderId !== userCurrent.account && <div className="action-button">
                         <Button 
                             icon={<UploadOutlined style={{ fontSize: '18px' }} />} 
                             onClick={showModalUpload}
@@ -333,18 +285,17 @@ export default function Home() {
                                     <InboxOutlined />
                                 </p>
                                 <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                                {/* <p className="ant-upload-hint">
-                                    Support for a single or bulk upload. Strictly prohibit from uploading company data or other
-                                    band files
-                                </p> */}
                             </Dragger>,
                         </Modal>
                     </div>}
                 </div>
+                <div>
+                    <Button onClick={() => redirectToFolder(parentFolder)}>Back</Button>
+                </div>
                 <div className="list-items mt-3">
                     <Table 
                         columns={columns} 
-                        dataSource={data} 
+                        dataSource={folderCurrent} 
                         rowKey={(record) => record.id} 
                     />
                 </div>

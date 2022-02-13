@@ -174,14 +174,11 @@ export default function MainLayout({children}) {
                 <Sider trigger={null} collapsible collapsed={collapsed}>
                     <div className="logo"></div>
                     <Menu theme="dark" mode="inline">
-                        <Menu.Item key="1" icon={<DatabaseOutlined />} onClick={() => redirect("/")}>
-                            My Folders
-                        </Menu.Item>
-                        <Menu.Item key="2" icon={<UsergroupAddOutlined />} onClick={() => redirect("/shared")}>
-                            Shared Folders
+                        <Menu.Item key="2" icon={<DatabaseOutlined />} onClick={() => redirect("/")}>
+                            My Folders V2
                         </Menu.Item>
                         <Menu.Item key="4" icon={<UserSwitchOutlined />} onClick={() => redirect("/shared_with_me")}>
-                            Shared With Me
+                            Shared With Me V2
                         </Menu.Item>
                     </Menu>
                 </Sider>

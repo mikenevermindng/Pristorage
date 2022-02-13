@@ -20,34 +20,19 @@ import {
 } from 'antd';
 import { 
     useSelector, 
-    useDispatch 
 } from 'react-redux';
 import {
-    getSharedFoldersWithMeInfo, 
-    getSharedFolderById
-} from '../store/slice/sharedFolderWithMe.slice'
-import {
-    getPublicKeyByPrivateKey,
     encryptStringTypeData,
-    decryptStringTypeData
 } from '../utils/keypair.utils'
-import {
-    storeFiles, 
-    retrieveFiles,
-    checkFileStatus,
-    validateToken
-} from '../utils/web3.storage'
-import {wrap} from 'comlink'
-import {concatenateBlobs, saveFile} from '../utils/file.utils'
-import {getUrlParameter} from '../utils/url.utils'
 import {useHistory} from 'react-router-dom'
-import {getSharedFileInfo} from '../store/slice/sharedFileWithMe.slice'
-import { unwrapResult } from '@reduxjs/toolkit'
 import {useFormik } from 'formik';
 import * as Yup from 'yup';
 import { v4 as uuidv4 } from 'uuid';
+import useFetchSharedDocs from '../hook/useFetchSharedDoc'
+import useFileCreate from '../hook/useFileCreate'
+import useDownloadFile from '../hook/useDownloadFile'
+import useFilePreview from '../hook/useFilePreview'
 
-const { TabPane } = Tabs;
 const { Dragger } = Upload;
 
 const folderValidationSchema = Yup.object().shape({
@@ -59,38 +44,41 @@ export default function SharedWithMe() {
     const history = useHistory()
 
     const [data, setData] = useState([])
-    const dispatch = useDispatch()
-    const {current: foldersSharedWithMe, loading: foldersSharedWithMeLoading, root: rootFoldersSharedToMe } = useSelector(state => state.sharedFolderWithMe)
-    const {current: filesSharedWithMe, loading: filesSharedWithMeLoading} = useSelector(state => state.sharedFileWithMe)
     const {loading: loadingCurrent, current: userCurrent} = useSelector(state => state.user)
-    const [permission, setPermission] = useState(1)
-
+    const {
+        loading: folderLoading, 
+        current: folderCurrent, 
+        root: rootFolder,
+        folderId: currentFolderId,
+        parentFolder,
+        permission
+    } = useSelector(state => state.sharedWithMe)
+    const {loading: submitting, fileSubmit} = useFileCreate()
+    const {loading: downloading, download} = useDownloadFile()
+    useFetchSharedDocs()
+    const {
+        preview
+    } = useFilePreview()
+    
     const formik = useFormik({
         initialValues: {
             name: '',
         },
         validationSchema: folderValidationSchema,
         onSubmit: async (values) => {
-            const folder_password = uuidv4()
-            const {success, cipher} = await encryptStringTypeData(userCurrent.publicKey, folder_password)
-            if (success) {
-                const id = uuidv4()
-                const {accountId} = await window.walletConnection.account()
-                const currentTimeStamp = new Date().getTime()
-                const folder = {
-                    _id: id, 
-                    _name: values.name, 
-                    _parent: foldersSharedWithMe.id,
-                    _password: cipher,
-                    _account_id: accountId,
-                    _created_at: currentTimeStamp,
-                }
-                await window.contract.create_shared_folder(folder)
-                history.go(0)
-            } else {
-                message.error('fail to encode password')
+            const currentTimeStamp = new Date().getTime()
+            const id = uuidv4()
+            const {accountId} = await window.walletConnection.account()
+            const folder = {
+                _id: id, 
+                _name: values.name, 
+                _parent: currentFolderId,
+                _password: null,
+                _created_at: currentTimeStamp,
+                _type: null,
             }
-            
+            await window.contract.create_folder_v2(folder)
+            history.go(0)
         }
     })
 
@@ -119,133 +107,52 @@ export default function SharedWithMe() {
         setIsModalUploadVisible(false);
     };
 
-    const storeToWeb3Storage = async (files, filename, fileType, encryptedPassword) => {
-        const totalSize = files.map(f => f.size).reduce((a, b) => a + b, 0)
-        let uploaded = 0
-
-        const onRootCidReady = cid => {
-            console.log('uploading files with cid:', cid)
-        }
-    
-        const onStoredChunk = size => {
-            uploaded += size
-            const pct = uploaded / totalSize
-            console.log(`Uploading... ${pct.toFixed(2) * 100}% complete`)
-        }
-
-        const cid = await storeFiles(userCurrent.web3token, files, onRootCidReady, onStoredChunk)
-        const currentTimeStamp = new Date().getTime()
-        await window.contract.create_shared_folder_file({
-            _folder: foldersSharedWithMe.id, 
-            _file_id: uuidv4(),
-            _cid: cid, 
-            _name: filename, 
-            _file_type: fileType,
-            _last_update: currentTimeStamp
-        })
-        history.go(0)
-    }
-
-    const fileSubmit = async (file) => {
-        console.log(foldersSharedWithMe)
-        const {rootId} = foldersSharedWithMe
-        const rootFolder = rootFoldersSharedToMe.find(folder => folder.id === rootId)
-        if (rootFolder) {
-            const {sharedPassword: folderPassword} = rootFolder
-            const {success, plaintext: folderDecryptedPassword} = await decryptStringTypeData(userCurrent.privateKey, folderPassword)
-            if (success) {
-                const worker = new Worker('../worker.js')
-                const {encryptByWorker} = wrap(worker)
-                const encryptedFiles = await encryptByWorker(file, folderDecryptedPassword)
-                await storeToWeb3Storage(encryptedFiles, file.name, file.type)
-                setIsModalUploadVisible(false)
-                history.go(0)
-            } else {
-                message.error('Fail to encrypt file ' + file.name)
+    const props = {
+        name: 'file',
+        multiple: false,
+        onChange(info) {
+            const { status } = info.file;
+            if (status !== 'uploading') {
+                fileSubmit(info.file.originFileObj, rootFolder, currentFolderId)
             }
-        }
-    }
-    
-    useEffect(() => {
-        const fetchData = async () => {
-            await dispatch(getSharedFoldersWithMeInfo());
-            const folderId = getUrlParameter('folder')
-            const owner = getUrlParameter('owner')
-            if (folderId && owner) {
-                const res = await dispatch(getSharedFolderById({id: folderId, owner: owner}))
-            } else {
-                console.log('calling function')
-                await dispatch(getSharedFileInfo());
-            }
-        }
-        fetchData()
-    }, [])
+        },
+        onDrop(e) {
+            console.log('Dropped files', e.dataTransfer.files);
+            fileSubmit(e.dataTransfer.files[0])
+        },
+    };
 
-    useEffect(() => {
-        if (rootFoldersSharedToMe.length && foldersSharedWithMe?.rootId) {
-            const {rootId} = foldersSharedWithMe
-            const sharedDoc = rootFoldersSharedToMe.find(doc => doc.id === rootId)
-            if (sharedDoc) {
-                setPermission(sharedDoc.permissions)
-            }
-        } 
-    }, [rootFoldersSharedToMe, foldersSharedWithMe])
-
-    const redirectToFolder = (id, owner) => {
-        if (id === owner) {
+    const redirectToFolder = (id) => {
+        if (!id || id === rootFolder?.parent) {
             history.push(`/shared_with_me`)
             history.go(0)
         } else {
-            history.push(`/shared_with_me?folder=${id}&owner=${owner}`)
+            history.push(`/shared_with_me?doc_id=${id}`)
             history.go(0)
         }
-        
     }
 
-    const downloadFileInSharedFolder = async (record) => {
-        const {rootId} = foldersSharedWithMe
-        const sharedDoc = rootFoldersSharedToMe.find(doc => doc.id === rootId)
-        if (sharedDoc) {
-            const {sharedPassword} = sharedDoc
-            const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, sharedPassword)
-            if (success) {
-                const files = await retrieveFiles(userCurrent.web3token, record.cid)
-                const worker = new Worker('../worker.js')
-                const {decryptByWorker} = wrap(worker)
-                const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-                console.log(decryptedFile)
-                concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                    saveFile(blob, record.name)
-                })
-            } else {
-                message.error('Fail to decrypt folder password')
-            }
+    const downloadFile = async (record) => {
+        const {cid, encrypted_password, name, file_type} = record
+        if (encrypted_password) {
+            download(cid, encrypted_password, name, file_type)
+        } else if (rootFolder?.folder_password) {
+            const {folder_password} = rootFolder
+            download(cid, folder_password, name, file_type)
         } else {
-            message.error('Fail to decrypt folder password')
+            message.error('download error, invalid file')
         }
     }
 
-    const downloadSharedFile = async (record) => {
-        const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, record.sharedPassword)
-        if (success) {
-            const files = await retrieveFiles(userCurrent.web3token, record.cid)
-            const worker = new Worker('../worker.js')
-            const {decryptByWorker} = wrap(worker)
-            const decryptedFile = await decryptByWorker(files, record.name, plaintext)
-            console.log(decryptedFile)
-            concatenateBlobs(decryptedFile, record.file_type, (blob) => {
-                saveFile(blob, record.name)
-            })
+    const previewFile = async (record) => {
+        const {cid, encrypted_password, name, file_type} = record
+        if (encrypted_password) {
+            preview(cid, encrypted_password, name, file_type)
+        } else if (rootFolder?.folder_password) {
+            const {folder_password} = rootFolder
+            preview(cid, folder_password, name, file_type)
         } else {
-            message.error('fail to download file')
-        }
-    }
-
-    const download = async (record) => {
-        if (record.isSharedFolderFile) {
-            await downloadFileInSharedFolder(record)
-        } else {
-            await downloadSharedFile(record)
+            message.error('download error, invalid file')
         }
     }
 
@@ -257,8 +164,8 @@ export default function SharedWithMe() {
                 return (
                     <div>
                         {record.isFolder  ? 
-                            <a onClick={() => redirectToFolder(record.id, record.owner)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
-                            <span><FileProtectOutlined /> {record.name}</span>
+                            <a onClick={() => redirectToFolder(record.id)}>{!record.isTop && <FolderOpenOutlined />} {record.name}</a>:
+                            <a onClick={() => previewFile(record)}><FileProtectOutlined /> {record.name}</a>
                         }
                     </div>
                 )
@@ -269,20 +176,15 @@ export default function SharedWithMe() {
             dataIndex: 'file_type',
         },
         {
-            title: 'Owner',
-            dataIndex: 'owner',
-            render(text, record) {
-                return <span>{record.isTop ? "" : record.owner}</span>
-            }
-        },
-        {
             title: '',
             render(text, record) {
                 return (
                     <div>
-                        {!record.isFolder  && !record.isTop && <div className="d-flex justify-content-evenly">
+                        {!record.isFolder && !record.isTop && <div className="d-flex justify-content-evenly">
                             <Tooltip title="Download">
-                                <Button onClick={() => download(record)}>
+                                <Button
+                                    onClick={async () => downloadFile(record)}
+                                >
                                     <DownloadOutlined />
                                 </Button>
                             </Tooltip>
@@ -292,76 +194,6 @@ export default function SharedWithMe() {
             }
         },
     ];
-
-    useEffect(() => {
-        const files = foldersSharedWithMe.files.map(file => {
-            return {
-                id: file.cid,
-                ...file,
-                isFolder: false,
-                isSharedFolderFile: true,
-            }
-        })
-        const folders = foldersSharedWithMe.children.map(child => {
-            return {
-                id: child.id,
-                ...child,
-                isFolder: true,
-                children: null,
-            }
-        })
-        const sharedFiles = filesSharedWithMe.map(file => {
-            return {
-                id: file.cid,
-                ...file,
-                isFolder: false,
-                isSharedFolderFile: false,
-            }
-        })
-        console.log(filesSharedWithMe, sharedFiles)
-        if (foldersSharedWithMe.owner === foldersSharedWithMe.parent) {
-            setData([
-                {
-                    name: "...",
-                    id: foldersSharedWithMe.parent,
-                    owner: foldersSharedWithMe.owner,
-                    isFolder: true,
-                    isTop: true
-                },
-                ...folders, 
-                ...files,
-                ...sharedFiles
-            ])
-        } else {
-            setData([
-                {
-                    name: "...",
-                    id: foldersSharedWithMe.parent,
-                    owner: foldersSharedWithMe.owner,
-                    isFolder: true,
-                    isTop: true
-                },
-                ...folders, 
-                ...files,
-                ...sharedFiles
-            ])
-        }
-    }, [foldersSharedWithMe, filesSharedWithMe])
-
-    const props = {
-        name: 'file',
-        multiple: false,
-        onChange(info) {
-            const { status } = info.file;
-            if (status !== 'uploading') {
-                fileSubmit(info.file.originFileObj)
-            }
-        },
-        onDrop(e) {
-            console.log('Dropped files', e.dataTransfer.files);
-            fileSubmit(e.dataTransfer.files[0])
-        },
-    };
 
     return (
         <>
@@ -410,20 +242,19 @@ export default function SharedWithMe() {
                                     <InboxOutlined />
                                 </p>
                                 <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                                {/* <p className="ant-upload-hint">
-                                    Support for a single or bulk upload. Strictly prohibit from uploading company data or other
-                                    band files
-                                </p> */}
                             </Dragger>,
                         </Modal>
                     </div>
                 </div>}
                 <div className="list-items mt-3">
+                    <div>
+                        <Button onClick={() => redirectToFolder(parentFolder)}>Back</Button>
+                    </div>
                     <div className="mt-3">
                         <Table 
                             columns={columns} 
-                            dataSource={data} 
-                            rowKey={(record) => record.id}  
+                            dataSource={folderCurrent} 
+                            rowKey={(record) => record.id} 
                         />
                     </div>
                 </div>

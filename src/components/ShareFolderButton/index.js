@@ -38,14 +38,12 @@ const ShareFolderButton = (props) => {
         },
         validationSchema: accountValidationSchema,
         onSubmit: async (values) => {
-            console.log(props)
             const user = await window.contract.get_user({account_id: values.account})
             if (!user) {
                 message.error(`User "${values.account}" not found`)
                 return
             }
             const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, props.folder_password)
-            console.log({plaintext, success})
             if (!success) {
                 message.error(`Wrong user password`)
                 return
@@ -56,14 +54,15 @@ const ShareFolderButton = (props) => {
                 message.error(`fail to encrypt password`)
                 return
             }
+            const current = new Date().getTime()
             const params = {
                 _folder_id: props.id, 
-                _doc_id: `${userCurrent.account}_${values.account}_${props.id}`, 
                 _share_with: values.account, 
                 _password: cipher,
-                _permissions: values.permissions
+                _permissions: values.permissions,
+                _created_at: current
             }
-            await window.contract.share_folder(params)
+            await window.contract.share_folder_v2(params)
             history.go(0)
         }
     })

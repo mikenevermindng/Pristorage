@@ -1,15 +1,11 @@
-import commonFolder from './commonFolder.slice'
-import sharedFoler from './sharedFolder.slice'
 import user from './user.slice'
-import sharedFileWithMe from './sharedFileWithMe.slice'
-import sharedFolderWithMe from './sharedFolderWithMe.slice'
+import folderV2 from './folderV2.slice'
+import sharedWithMe from './sharedWithMeV2'
 
 const reducers = {
-    commonFolder: commonFolder,
-    sharedFolder: sharedFoler,
+    folderV2: folderV2,
+    sharedWithMe: sharedWithMe,
     user: user,
-    sharedFileWithMe: sharedFileWithMe,
-    sharedFolderWithMe: sharedFolderWithMe
 }
 
 export default reducers
