@@ -7,6 +7,7 @@ import {
     FolderAddOutlined,
     UploadOutlined,
     InboxOutlined,
+    ArrowLeftOutlined
 } from '@ant-design/icons';
 import { 
     Table, 
@@ -248,7 +249,9 @@ export default function SharedWithMe() {
                 </div>}
                 <div className="list-items mt-3">
                     <div>
-                        <Button onClick={() => redirectToFolder(parentFolder)}>Back</Button>
+                        <Tooltip title="Back">
+                            <Button onClick={() => redirectToFolder(parentFolder)}><ArrowLeftOutlined /></Button>
+                        </Tooltip>
                     </div>
                     <div className="mt-3">
                         <Table 

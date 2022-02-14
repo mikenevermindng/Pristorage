@@ -6,7 +6,8 @@ import {
     InboxOutlined,
     DownloadOutlined,
     FolderOpenOutlined,
-    FileProtectOutlined
+    FileProtectOutlined,
+    ArrowLeftOutlined
 } from '@ant-design/icons';
 import { 
     Button, 
@@ -290,7 +291,9 @@ export default function Home() {
                     </div>}
                 </div>
                 <div>
-                    <Button onClick={() => redirectToFolder(parentFolder)}>Back</Button>
+                    <Tooltip title="Back">
+                        <Button onClick={() => redirectToFolder(parentFolder)}><ArrowLeftOutlined /></Button>
+                    </Tooltip>
                 </div>
                 <div className="list-items mt-3">
                     <Table 

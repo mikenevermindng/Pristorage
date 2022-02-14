@@ -59,6 +59,7 @@ export default function MainLayout({children}) {
     const [isModalLoginVisible, setIsModalLoginVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isHideLayout, setHideLayout] = useState(false);
+    const [modalKeyVisible, setModalKeyVisible] = useState(false);
     const {
         isRegistered,
         isLoggedIn
@@ -84,8 +85,8 @@ export default function MainLayout({children}) {
             const {accountId} = await window.walletConnection.account()
             setLoading(true);
             const {privateKey, publicKey} = createKeyPair();
-            const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
-            saveFile(blob, `${accountId}_private_key.txt`)
+            // const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
+            // saveFile(blob, `${accountId}_private_key.txt`)
             const {success, cipher} = await encryptStringTypeData(publicKey, values.token)
             if (success) {
                 window.localStorage.setItem(`${accountId}_private_key`, privateKey)
@@ -122,7 +123,10 @@ export default function MainLayout({children}) {
 
     const menu = (
         <Menu>
-            <Menu.Item key="1" onClick={logoutHandler} danger>
+            <Menu.Item key="1" onClick={() => setModalKeyVisible(true)}>
+                Private Key
+            </Menu.Item>
+            <Menu.Item key="2" onClick={logoutHandler} danger>
                 Logout
             </Menu.Item>
         </Menu>
@@ -226,7 +230,7 @@ export default function MainLayout({children}) {
                 ]}
             >
                 <div className="input-group mb-3">
-                    <label className="form-label">Password</label>
+                    <label className="form-label">Private key</label>
                     <TextArea 
                         placeholder="Private key" 
                         onChange={loginHandleChange('seedPhrase')}
@@ -249,13 +253,29 @@ export default function MainLayout({children}) {
                     </Button>,
                 ]}
             >
-                <div className="input-group mb-3">
-                    <label className="form-label">Web3Storage Token</label>
+                <div className="input-group mb-3 d-block">
+                    <div className="form-label"><b>Web3Storage Token</b></div>
+                    <div>You can get or create your token at this <a href="https://web3.storage/account/" target="_blank">link</a></div>
                     <TextArea 
                         placeholder="Web3Storage Token" 
                         onChange={handleChange('token')}
                     />
                     {errors.token && <span className="error-text">{errors.token}</span>}
+                </div>
+            </Modal>
+            <Modal
+                visible={modalKeyVisible}
+                title="User's private key"
+                onOk={() => setModalKeyVisible(false)}
+                onCancel={() => setModalKeyVisible(false)}
+                footer={[]}
+            >
+                <div className="input-group mb-3">
+                    <label className="form-label">Private key</label>
+                    <TextArea 
+                        disabled
+                        value={current.privateKey} 
+                    />
                 </div>
             </Modal>
         </div>

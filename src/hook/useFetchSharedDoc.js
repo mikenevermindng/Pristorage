@@ -67,10 +67,10 @@ const useFetchSharedDocs = () => {
         const {accountId} = await window.walletConnection.account()
         const sharedDocOfUser = await window.contract.get_shared_doc_of_user({_account_id: accountId})
         setTotal(sharedDocOfUser.length)
-        const start = page * limit
-        const end = (page + 1) * limit
-        const sharedDocSlice = sharedDocOfUser.slice(start, end)
-        Promise.all(sharedDocSlice.map(doc => {
+        // const start = page * limit
+        // const end = (page + 1) * limit
+        // const sharedDocSlice = sharedDocOfUser.slice(start, end)
+        Promise.all(sharedDocOfUser.map(doc => {
             return window.contract.get_shared_doc_detail({_doc_id: doc})
         })).then((result) => {
             result.forEach(shareData => {
