@@ -64,6 +64,7 @@ export default function MainLayout({children}) {
         isRegistered,
         isLoggedIn
     } = useFetchUser()
+    const [accountId, setAccountId] = useState("")
 
     useEffect(() => {
         const currentURL = window.location.href
@@ -165,7 +166,14 @@ export default function MainLayout({children}) {
         }
     }, [current])
 
+
+    const getAccountId = async () => {
+        const {accountId} = await window.walletConnection.account()
+        setAccountId(accountId)
+    }
+
     useEffect(() => {
+        getAccountId()
         if (!isRegistered) {
             showModal()
         } else if (!isLoggedIn) {
@@ -222,9 +230,16 @@ export default function MainLayout({children}) {
             </Layout>}
             <Modal
                 visible={isModalLoginVisible}
-                title="Your private key"
+                title={`Login as ${accountId}`}
                 onOk={loginHandleSubmit}
                 footer={[
+                    <Button
+                        loading={loading}
+                        onClick={logoutHandler}
+                        key="signout button"
+                    >
+                        Login with another account
+                    </Button>,
                     <Button
                         loading={loading}
                         type="primary"
@@ -236,7 +251,7 @@ export default function MainLayout({children}) {
                 ]}
             >
                 <div className="input-group mb-3">
-                    <label className="form-label">Private key</label>
+                    <label className="form-label">Please enter your private key</label>
                     <TextArea 
                         placeholder="Private key" 
                         onChange={loginHandleChange('seedPhrase')}
