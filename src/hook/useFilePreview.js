@@ -25,6 +25,7 @@ const useFilePreview = () => {
     const [previewing, setPreviewing] = useState(false)
     
     const downloadAndCreateUrl = async (cid, encryptedPassword, name, fileType) => {
+        message.info('Wait for file to be ready')
         const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, encryptedPassword)
         if (success) {
             const files = await retrieveFiles(userCurrent.web3token, cid)

@@ -25,9 +25,12 @@ const useDownloadFile = () => {
 
     const download = async (cid, encryptedPassword, name, fileType) => {
         setLoading(true)
+
         const {plaintext, success} = await decryptStringTypeData(userCurrent.privateKey, encryptedPassword)
         if (success) {
+            message.info('Downloading')
             const files = await retrieveFiles(userCurrent.web3token, cid)
+            message.info('Decrypting')
             const worker = new Worker('../worker.js')
             const {decryptByWorker} = wrap(worker)
             const decryptedFile = await decryptByWorker(files, name, plaintext)
@@ -36,7 +39,7 @@ const useDownloadFile = () => {
                 setLoading(false)
             })
         } else {
-            message.error('Fail to download file')
+            message.error('Invalid private key')
         }
     }
 
