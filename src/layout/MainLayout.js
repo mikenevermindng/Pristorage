@@ -65,6 +65,7 @@ export default function MainLayout({children}) {
         isLoggedIn
     } = useFetchUser()
     const [accountId, setAccountId] = useState("")
+    const [appPrivateKey, setAppPrivateKey] = useState("")
 
     useEffect(() => {
         const currentURL = window.location.href
@@ -86,16 +87,15 @@ export default function MainLayout({children}) {
             const {accountId} = await window.walletConnection.account()
             setLoading(true);
             const {privateKey, publicKey} = createKeyPair();
-            // const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
-            // saveFile(blob, `${accountId}_private_key.txt`)
             const {success, cipher} = await encryptStringTypeData(publicKey, values.token)
             if (success) {
                 window.localStorage.setItem(`${accountId}_private_key`, privateKey)
                 window.localStorage.setItem(`${accountId}_web3_storage_token`, values.token)
                 const current = new Date().getTime()
                 await window.contract.sign_up({_public_key: publicKey, _encrypted_token: cipher, _created_at: current})
+                setAppPrivateKey(privateKey)
                 setIsModalVisible(false)
-                history.go(0)
+                setModalKeyVisible(true)
             } else {
                 message.error('Fail to sign up')
             }
@@ -122,10 +122,12 @@ export default function MainLayout({children}) {
         }) 
     }
 
-    const downloadPrivateKey = () => {
-        const {privateKey, account} = current
-        const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
-        saveFile(blob, `${account}_private_key.txt`)
+    const downloadPrivateKey = async () => {
+        const {accountId} = await window.walletConnection.account()
+        const privateKey = window.localStorage.getItem(`${accountId}_private_key`)
+        const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" })
+        await saveFile(blob, `${accountId}_private_key.txt`)
+        history.go(0)
     }
 
     const menu = (
@@ -172,18 +174,30 @@ export default function MainLayout({children}) {
         setAccountId(accountId)
     }
 
+    const getPrivateKey = async () => {
+        const {accountId} = await window.walletConnection.account()
+        const privateKey = window.localStorage.getItem(`${accountId}_private_key`)
+        setAppPrivateKey(privateKey)
+    }
+
     useEffect(() => {
         getAccountId()
         if (!isRegistered) {
             showModal()
         } else if (!isLoggedIn) {
             setIsModalLoginVisible(true)
+        } else {
+            getPrivateKey()
         }
     }, [isRegistered, isLoggedIn])
 
     const redirect = (path) => {
         history.push(path)
         history.go(0)
+    }
+
+    const handleCloseModalPrivateKey = () => {
+        setModalKeyVisible(false)
     }
 
     return (
@@ -287,17 +301,17 @@ export default function MainLayout({children}) {
             <Modal
                 visible={modalKeyVisible}
                 title="User's private key"
-                onOk={() => setModalKeyVisible(false)}
-                onCancel={() => setModalKeyVisible(false)}
+                onOk={handleCloseModalPrivateKey}
+                onCancel={handleCloseModalPrivateKey}
                 footer={[
-                    <Button type="primary" onClick={downloadPrivateKey}>Download</Button>
+                    <Button key="1" type="primary" onClick={downloadPrivateKey}>Download</Button>
                 ]}
             >
                 <div className="input-group mb-3">
                     <label className="form-label">Private key</label>
                     <TextArea 
                         disabled
-                        value={current.privateKey} 
+                        value={appPrivateKey} 
                     />
                 </div>
             </Modal>
