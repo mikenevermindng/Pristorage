@@ -66,7 +66,7 @@ export default function Home() {
     const formik = useFormik({
         initialValues: {
             name: '',
-            type: null
+            type: 1
         },
         validationSchema: folderValidationSchema,
         onSubmit: async (values) => {
@@ -258,14 +258,14 @@ export default function Home() {
                                 </div>
                                 {errors.name && <span className="error-text">{errors.name}</span>}
                             </div>
-                            <div>
+                            {currentFolderId === userCurrent.account && <div>
                                 <label className="form-label">Folder type</label>
                                 <Select style={{ width: '100%' }} onChange={(val) => setFieldValue('type', parseInt(val))}>
                                     <Option value="1">Private</Option>
                                     <Option value="2">Shareable</Option>
                                 </Select>
                                 {errors.type && <span className="error-text">{errors.type}</span>}
-                            </div>
+                            </div>}
                         </Modal>
                     </div>
                     {currentFolderId !== userCurrent.account && <div className="action-button">

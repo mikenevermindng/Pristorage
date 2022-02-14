@@ -121,6 +121,12 @@ export default function MainLayout({children}) {
         }) 
     }
 
+    const downloadPrivateKey = () => {
+        const {privateKey, account} = current
+        const blob = new Blob([privateKey], { type: "text/plain;charset=utf-8" });
+        saveFile(blob, `${account}_private_key.txt`)
+    }
+
     const menu = (
         <Menu>
             <Menu.Item key="1" onClick={() => setModalKeyVisible(true)}>
@@ -268,7 +274,9 @@ export default function MainLayout({children}) {
                 title="User's private key"
                 onOk={() => setModalKeyVisible(false)}
                 onCancel={() => setModalKeyVisible(false)}
-                footer={[]}
+                footer={[
+                    <Button type="primary" onClick={downloadPrivateKey}>Download</Button>
+                ]}
             >
                 <div className="input-group mb-3">
                     <label className="form-label">Private key</label>
